@@ -14,6 +14,7 @@ export const GIT_COMMANDS = [
   "log",
   "show",
   "merge-base",
+  "config",
 ] as const;
 
 export type GitCommand = (typeof GIT_COMMANDS)[number];
@@ -34,9 +35,25 @@ export interface GitRunOptions {
   readonly maxOutputBytes?: number;
 }
 
+/** The only two `git config` calls Pena may run. Both are read-only lookups. */
+export const GIT_CONFIG_QUERIES = {
+  partialCloneExtension: ["-z", "--get", "extensions.partialclone"],
+  promisorRemotes: ["-z", "--bool", "--get-regexp", "^remote\\..*\\.promisor$"],
+} as const;
+
+export type GitConfigQuery = keyof typeof GIT_CONFIG_QUERIES;
+
+function isFixedConfigQuery(args: readonly string[]): boolean {
+  return Object.values<readonly string[]>(GIT_CONFIG_QUERIES).some(
+    (query) =>
+      query.length === args.length &&
+      query.every((value, index) => value === args[index]),
+  );
+}
+
 const DIFF_COMMANDS: readonly string[] = ["diff-tree", "log", "show"];
 
-/** The full argument list given to the git program. Throws Error on a bad command, a "--" in args, or a NUL in any arg or path. */
+/** The full argument list given to the git program. Throws Error on a bad command, a locked-down config call, a "--" in args, or a NUL in any arg or path. */
 export function buildGitArgs(
   command: GitCommand,
   args: readonly string[],
@@ -49,12 +66,21 @@ export function buildGitArgs(
     throw new Error('Pass file paths in "paths", not after "--" in args');
   }
   const filePaths = paths ?? [];
+  if (
+    command === "config" &&
+    (filePaths.length > 0 || !isFixedConfigQuery(args))
+  ) {
+    throw new Error(
+      "git config is allowed only for Tulis's fixed read-only lookups",
+    );
+  }
   if ([...args, ...filePaths].some((value) => value.includes("\0"))) {
     throw new Error("Git arguments must not contain NUL characters");
   }
   return [
     "--no-pager",
     "--no-replace-objects",
+    "--literal-pathspecs",
     "-c",
     "core.fsmonitor=false",
     "-c",
@@ -91,6 +117,15 @@ export class GitCommandError extends Error {
     this.exitCode = details.exitCode;
     this.stderr = details.stderr ?? "";
   }
+}
+
+/** True when git exited with code 1, which rev-parse --verify, merge-base and config use to say "not found". */
+export function isNotFoundExit(error: unknown): boolean {
+  return (
+    error instanceof GitCommandError &&
+    error.failure === "exit" &&
+    error.exitCode === 1
+  );
 }
 
 export interface GitExit {

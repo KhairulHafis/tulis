@@ -41,3 +41,20 @@ export function checkBranchName(name: string): void {
 export function isObjectId(value: string): boolean {
   return /^[0-9a-f]{40}$/.test(value) || /^[0-9a-f]{64}$/.test(value);
 }
+
+/** Throws an Error `Not a full object ID: "<safe value>"` unless isObjectId(value). */
+export function checkObjectId(value: string): void {
+  if (!isObjectId(value)) {
+    throw new Error(`Not a full object ID: "${toSafeText(value)}"`);
+  }
+}
+
+/** The single full object ID in a git command's output (blank lines ignored). Throws Error `git <command> did not return a single commit ID` for anything else. */
+export function parseSingleCommitId(output: string, command: string): string {
+  const lines = output.split(/\r?\n/).filter((line) => line !== "");
+  const commit = lines[0];
+  if (lines.length !== 1 || commit === undefined || !isObjectId(commit)) {
+    throw new Error(`git ${command} did not return a single commit ID`);
+  }
+  return commit;
+}
