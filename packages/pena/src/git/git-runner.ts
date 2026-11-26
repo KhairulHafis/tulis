@@ -1,6 +1,7 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import type { ChildProcess, ExecFileException } from "node:child_process";
 import path, { isAbsolute } from "node:path";
+import type { Readable, Writable } from "node:stream";
 import type { GitExecutable } from "./find-git.js";
 import { buildGitEnv } from "./git-env.js";
 import { toSafeText } from "./safe-text.js";
@@ -53,6 +54,7 @@ export function buildGitArgs(
   }
   return [
     "--no-pager",
+    "--no-replace-objects",
     "-c",
     "core.fsmonitor=false",
     "-c",
@@ -91,6 +93,35 @@ export class GitCommandError extends Error {
   }
 }
 
+export interface GitExit {
+  /** git's exit code, or null when it was stopped by a signal or never started. */
+  readonly exitCode: number | null;
+  /** The signal that stopped git, or null. */
+  readonly signal: NodeJS.Signals | null;
+  /** git's stderr through toSafeText({ maxLength: 2000, keepNewlines: true }); "" when none. */
+  readonly stderr: string;
+  /** Set only when git could not be started: a GitCommandError with failure "spawn". */
+  readonly startError?: GitCommandError;
+}
+
+export interface GitProcess {
+  /** git's stdin. Write errors (for example EPIPE after git exits) are swallowed here; they show up in `exited`. */
+  readonly stdin: Writable;
+  /** git's stdout as raw bytes (Buffer chunks, no encoding set). */
+  readonly stdout: Readable;
+  /** Resolves once git has exited (or failed to start). Never rejects. */
+  readonly exited: Promise<GitExit>;
+  /** Stops git and everything it started (taskkill /T /F on Windows, SIGKILL elsewhere). Safe to call more than once, and after git has exited (then it does nothing). */
+  stop(): void;
+}
+
+export interface GitStartOptions {
+  /** File paths, always placed after "--". */
+  readonly paths?: readonly string[];
+}
+
+const MAX_START_STDERR_BYTES = 64 * 1024;
+
 export interface GitRunner {
   readonly git: GitExecutable;
   /** Absolute folder every command runs in. */
@@ -101,6 +132,12 @@ export interface GitRunner {
     args: readonly string[],
     options?: GitRunOptions,
   ): Promise<string>;
+  /** Starts one read command with the same flags and environment as run(), and returns at once. No timeout of its own: the caller must call stop() when done or on its own timeout. Throws Error on bad input (same rules as buildGitArgs). */
+  start(
+    command: GitCommand,
+    args: readonly string[],
+    options?: GitStartOptions,
+  ): GitProcess;
 }
 
 function checkLimit(name: string, value: number): void {
@@ -270,6 +307,80 @@ export function createGitRunner(
           stopGit(child);
         }, timeoutMs);
       });
+    },
+    start(command, args, options) {
+      const gitArgs = buildGitArgs(command, args, options?.paths);
+      const child = spawn(git.path, gitArgs, {
+        cwd: repoDir,
+        env: buildGitEnv(env),
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+      });
+      // A write after git exits fails with EPIPE; that must not crash Node.
+      child.stdin.on("error", () => {
+        // Swallowed on purpose. The outcome shows up in `exited`.
+      });
+
+      const stderrChunks: Buffer[] = [];
+      let stderrBytes = 0;
+      child.stderr.on("data", (chunk: Buffer) => {
+        const room = MAX_START_STDERR_BYTES - stderrBytes;
+        if (room > 0) {
+          const kept = chunk.subarray(0, room);
+          stderrChunks.push(kept);
+          stderrBytes += kept.length;
+        }
+      });
+
+      let finished = false;
+      const exited = new Promise<GitExit>((resolve) => {
+        child.on("error", (error) => {
+          if (finished) {
+            return;
+          }
+          finished = true;
+          resolve({
+            exitCode: null,
+            signal: null,
+            stderr: "",
+            startError: new GitCommandError(
+              command,
+              "spawn",
+              `Could not start git ${command}.`,
+              { cause: error },
+            ),
+          });
+        });
+        // "close" comes after stdio has ended, so stderr is complete.
+        child.on("close", (exitCode, signal) => {
+          if (finished) {
+            return;
+          }
+          finished = true;
+          resolve({
+            exitCode,
+            signal,
+            stderr: toSafeText(Buffer.concat(stderrChunks).toString("utf8"), {
+              maxLength: 2000,
+              keepNewlines: true,
+            }),
+          });
+        });
+      });
+
+      return {
+        stdin: child.stdin,
+        stdout: child.stdout,
+        exited,
+        stop() {
+          // Once git has exited its process ID may be reused, so never
+          // signal it again (exitCode/signalCode are set on "exit").
+          const ended = child.exitCode !== null || child.signalCode !== null;
+          if (!finished && !ended) {
+            stopGit(child);
+          }
+        },
+      };
     },
   };
 }

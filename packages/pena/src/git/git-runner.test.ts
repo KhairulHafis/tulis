@@ -17,6 +17,7 @@ import {
 
 const HARDENING = [
   "--no-pager",
+  "--no-replace-objects",
   "-c",
   "core.fsmonitor=false",
   "-c",
@@ -31,6 +32,7 @@ describe("buildGitArgs", () => {
   it("builds the full list for rev-parse", () => {
     expect(build("rev-parse", ["HEAD"])).toEqual([
       "--no-pager",
+      "--no-replace-objects",
       "-c",
       "core.fsmonitor=false",
       "-c",
@@ -45,7 +47,7 @@ describe("buildGitArgs", () => {
     for (const command of GIT_COMMANDS) {
       const result = build(command, ["x"]);
       if (diffCommands.includes(command)) {
-        expect(result.slice(5, 8)).toEqual([
+        expect(result.slice(6, 9)).toEqual([
           command,
           "--no-ext-diff",
           "--no-textconv",
@@ -59,7 +61,7 @@ describe("buildGitArgs", () => {
 
   it("starts with the hardening items for every command", () => {
     for (const command of GIT_COMMANDS) {
-      expect(build(command, []).slice(0, 5)).toEqual(HARDENING);
+      expect(build(command, []).slice(0, 6)).toEqual(HARDENING);
     }
   });
 
