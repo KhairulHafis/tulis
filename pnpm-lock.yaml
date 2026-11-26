@@ -218,6 +218,8 @@ importers:
 
   packages/pena: {}
 
+  packages/testkit: {}
+
   packages/vscode:
     dependencies:
       '@tulis/pena':
