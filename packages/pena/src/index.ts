@@ -27,7 +27,10 @@ export {
 export type {
   GitCommand,
   GitRunOptions,
+  GitStartOptions,
   GitRunner,
+  GitProcess,
+  GitExit,
   GitFailure,
 } from "./git/git-runner.js";
 export {
@@ -35,3 +38,27 @@ export {
   checkBranchName,
   isObjectId,
 } from "./git/ref-name.js";
+export {
+  resolveProdRef,
+  prodRefCandidates,
+  NoProdRefError,
+  PROD_REMOTE,
+} from "./git/prod-ref.js";
+export type { ProdRef, ProdRefSource } from "./git/prod-ref.js";
+export { listTree, parseLsTree, isSafeTreePath } from "./git/list-tree.js";
+export {
+  openBlobReader,
+  DEFAULT_MAX_BLOB_BYTES,
+  DEFAULT_READ_TIMEOUT_MS,
+} from "./git/blob-reader.js";
+export type {
+  BlobReader,
+  BlobReaderOptions,
+  BlobResult,
+} from "./git/blob-reader.js";
+export type {
+  TreeListing,
+  TreeFile,
+  SkippedTreeEntry,
+  SkipReason,
+} from "./git/list-tree.js";

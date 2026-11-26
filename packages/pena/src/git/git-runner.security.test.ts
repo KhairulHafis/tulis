@@ -11,6 +11,7 @@ import {
   GitCommandError,
   buildGitArgs,
   createGitRunner,
+  type GitRunner,
 } from "./git-runner.js";
 
 const execFileAsync = promisify(execFile);
@@ -272,5 +273,72 @@ describe("git runner security", () => {
     expect(error.message).not.toContain("\u001b");
     expect(error.stderr).not.toContain("\u001b");
     expect(error.stderr).toContain("?[31m");
+  }, 30_000);
+
+  /** Runs cat-file --batch through start() and returns everything it printed for one object ID. */
+  async function batchRead(runner: GitRunner, id: string): Promise<string> {
+    const proc = runner.start("cat-file", ["--batch"]);
+    const chunks: Buffer[] = [];
+    proc.stdout.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    proc.stdin.write(`${id}\n`);
+    proc.stdin.end();
+    try {
+      await proc.exited;
+    } finally {
+      proc.stop();
+    }
+    return Buffer.concat(chunks).toString("utf8");
+  }
+
+  // Proves replace refs are ignored, so the real object is always read.
+  it("ignores git replace refs", async () => {
+    const repo = await newRepo();
+    await repo.commit({ message: "first", files: { "x.md": "x\n" } });
+    repo.writeFile("a.txt", "real\n");
+    repo.writeFile("b.txt", "fake\n");
+    const a = (await repo.git(["hash-object", "-w", "a.txt"])).trim();
+    const b = (await repo.git(["hash-object", "-w", "b.txt"])).trim();
+    await repo.git(["replace", a, b]);
+    const runner = createGitRunner(git, repo.dir);
+
+    expect(await runner.run("cat-file", ["-p", a])).toBe("real\n");
+    expect(await batchRead(runner, a)).toBe(`${a} blob 5\nreal\n\n`);
+
+    // Control: plain git follows the replace ref.
+    expect(await repo.git(["cat-file", "-p", a])).toBe("fake\n");
+  }, 30_000);
+
+  // Proves GIT_CONFIG_COUNT variables from the caller are ignored by start().
+  it("ignores GIT_CONFIG_COUNT from the caller in start()", async () => {
+    const repo = await newRepo();
+    await repo.commit({ message: "first", files: { "a.md": "a\n" } });
+    const injected = {
+      ...process.env,
+      GIT_CONFIG_COUNT: "1",
+      GIT_CONFIG_KEY_0: "core.abbrev",
+      GIT_CONFIG_VALUE_0: "20",
+    };
+    const proc = createGitRunner(git, repo.dir, injected).start("rev-parse", [
+      "--short",
+      "HEAD",
+    ]);
+    const chunks: Buffer[] = [];
+    proc.stdout.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    const exit = await proc.exited;
+    expect(exit.exitCode).toBe(0);
+    const viaPena = Buffer.concat(chunks).toString("utf8").trim();
+    expect(viaPena.length).toBeLessThan(20);
+
+    // Control: plain git with the same environment honours the setting.
+    const { stdout } = await execFileAsync(
+      git.path,
+      ["rev-parse", "--short", "HEAD"],
+      { cwd: repo.dir, env: injected },
+    );
+    expect(stdout.trim()).toHaveLength(20);
   }, 30_000);
 });
