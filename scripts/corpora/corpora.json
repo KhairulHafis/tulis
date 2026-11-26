@@ -1,0 +1,18 @@
+{
+  "corpora": [
+    {
+      "name": "kubernetes-website",
+      "url": "https://github.com/kubernetes/website.git",
+      "branch": "main",
+      "commit": "7c81c4a67b17aa329f277a53b9e9111fb03b0ede",
+      "docsPath": "content/en/docs"
+    },
+    {
+      "name": "gitlab",
+      "url": "https://gitlab.com/gitlab-org/gitlab.git",
+      "branch": "master",
+      "commit": "dbf97d490cc6d6626e436cfabcd08a6f8b72af35",
+      "docsPath": "doc"
+    }
+  ]
+}

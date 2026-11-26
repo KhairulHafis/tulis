@@ -10,7 +10,8 @@
     "typecheck": "tsc -b",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "corpora": "node scripts/corpora/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
