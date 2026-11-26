@@ -4,6 +4,7 @@
     { "path": "./packages/pena" },
     { "path": "./packages/cli" },
     { "path": "./packages/vscode" },
+    { "path": "./packages/testkit" },
     { "path": "./tests" },
     { "path": "./scripts" }
   ]
