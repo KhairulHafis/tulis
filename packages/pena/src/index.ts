@@ -88,3 +88,50 @@ export {
   parsePromisorRemotes,
 } from "./git/clone-kind.js";
 export type { CloneKind } from "./git/clone-kind.js";
+export {
+  loadConfig,
+  formatIssue,
+  ConfigError,
+  CONFIG_FILE,
+  MAX_CONFIG_BYTES,
+} from "./config/load-config.js";
+export type { LoadedConfig } from "./config/load-config.js";
+export { checkConfig, MAX_ISSUES } from "./config/check-config.js";
+export type { ConfigCheckResult } from "./config/check-config.js";
+export {
+  parseYaml,
+  YamlParseError,
+  DEFAULT_MAX_YAML_BYTES,
+  DEFAULT_MAX_YAML_ALIASES,
+  DEFAULT_MAX_YAML_DEPTH,
+} from "./config/parse-yaml.js";
+export type {
+  ParsedYaml,
+  ParseYamlOptions,
+  YamlPath,
+} from "./config/parse-yaml.js";
+export {
+  DEFAULT_CONFIG,
+  DEFAULT_EXCLUDES,
+  LANGUAGE_CODES,
+  effectiveExcludes,
+} from "./config/config-defaults.js";
+export {
+  parseFileSize,
+  KILOBYTE,
+  MEGABYTE,
+  MIN_MAX_FILE_SIZE,
+  MAX_MAX_FILE_SIZE,
+  DEFAULT_MAX_FILE_SIZE,
+} from "./config/file-size.js";
+export { CONFIG_FORMAT_VERSION } from "./config/config-types.js";
+export type {
+  TulisConfig,
+  DocTypesConfig,
+  DocTypeRule,
+  TuningConfig,
+  ConfidenceWeights,
+  ConfigIssue,
+  ConfigPath,
+  LineLookup,
+} from "./config/config-types.js";
