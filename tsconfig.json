@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/pena" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/vscode" }
+  ]
+}

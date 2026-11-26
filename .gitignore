@@ -1,0 +1,20 @@
+# Dependencies and build output
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Local corpus cache used by dev scripts
+.cache/
+
+# AI and assistant files must never enter this repo
+CLAUDE.md
+.claude/
+
+# Local secrets
+.env
+.env.*
+
+# OS and editor clutter
+.DS_Store
+*.log

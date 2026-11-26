@@ -1,0 +1,13 @@
+packages:
+  - "packages/*"
+
+# Save exact versions, never ranges.
+saveExact: true
+# Refuse to install when Node does not match "engines".
+engineStrict: true
+# Fail the install if a dependency has an install script that is not allowed.
+strictDepBuilds: true
+# No dependency may run build scripts.
+allowBuilds: {}
+# Only install versions published at least 7 days ago (minutes).
+minimumReleaseAge: 10080
