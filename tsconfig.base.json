@@ -19,7 +19,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "types": [],
+    "types": ["node"],
     "skipLibCheck": true
   }
 }
