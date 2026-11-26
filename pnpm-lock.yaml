@@ -216,7 +216,11 @@ importers:
         specifier: workspace:*
         version: link:../pena
 
-  packages/pena: {}
+  packages/pena:
+    devDependencies:
+      '@tulis/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
   packages/testkit: {}
 
