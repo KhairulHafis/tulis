@@ -4,8 +4,7 @@ import {
   type GitProcess,
   type GitRunner,
 } from "./git-runner.js";
-import { isObjectId } from "./ref-name.js";
-import { toSafeText } from "./safe-text.js";
+import { checkObjectId } from "./ref-name.js";
 
 export const DEFAULT_MAX_BLOB_BYTES = 1024 * 1024;
 export const DEFAULT_READ_TIMEOUT_MS = 30_000;
@@ -314,9 +313,7 @@ export function openBlobReader(
       if (broken !== undefined) {
         throw broken;
       }
-      if (!isObjectId(blobId)) {
-        throw new Error(`Not a full object ID: "${toSafeText(blobId)}"`);
-      }
+      checkObjectId(blobId);
       return await new Promise<BlobResult>((resolve, reject) => {
         pending.push({ id: blobId, resolve, reject });
         if (timer === undefined) {

@@ -22,7 +22,9 @@ export {
   GIT_COMMANDS,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_MAX_OUTPUT_BYTES,
+  GIT_CONFIG_QUERIES,
   GitCommandError,
+  isNotFoundExit,
 } from "./git/git-runner.js";
 export type {
   GitCommand,
@@ -32,11 +34,14 @@ export type {
   GitProcess,
   GitExit,
   GitFailure,
+  GitConfigQuery,
 } from "./git/git-runner.js";
 export {
   isValidBranchName,
   checkBranchName,
   isObjectId,
+  checkObjectId,
+  parseSingleCommitId,
 } from "./git/ref-name.js";
 export {
   resolveProdRef,
@@ -45,7 +50,12 @@ export {
   PROD_REMOTE,
 } from "./git/prod-ref.js";
 export type { ProdRef, ProdRefSource } from "./git/prod-ref.js";
-export { listTree, parseLsTree, isSafeTreePath } from "./git/list-tree.js";
+export {
+  listTree,
+  parseLsTree,
+  parseLsTreeRecords,
+  isSafeTreePath,
+} from "./git/list-tree.js";
 export {
   openBlobReader,
   DEFAULT_MAX_BLOB_BYTES,
@@ -61,4 +71,20 @@ export type {
   TreeFile,
   SkippedTreeEntry,
   SkipReason,
+  LsTreeRecord,
 } from "./git/list-tree.js";
+export { classifyTreeMode, TREE_ENTRY_OBJECT_TYPE } from "./git/tree-entry.js";
+export type { TreeEntryKind } from "./git/tree-entry.js";
+export { diffTrees, parseDiffTree } from "./git/diff-tree.js";
+export type { TreeDiff, TreeChange, TreeChangeKind } from "./git/diff-tree.js";
+export { resolveHead, findMergeBase } from "./git/merge-base.js";
+export type { MergeBaseResult } from "./git/merge-base.js";
+export { readFileAtCommit } from "./git/read-at-commit.js";
+export type { FileAtCommit } from "./git/read-at-commit.js";
+export {
+  detectCloneKind,
+  isShallowRepository,
+  isPartialClone,
+  parsePromisorRemotes,
+} from "./git/clone-kind.js";
+export type { CloneKind } from "./git/clone-kind.js";

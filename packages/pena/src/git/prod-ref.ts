@@ -1,5 +1,5 @@
-import { GitCommandError, type GitRunner } from "./git-runner.js";
-import { checkBranchName, isObjectId } from "./ref-name.js";
+import { isNotFoundExit, type GitRunner } from "./git-runner.js";
+import { checkBranchName, parseSingleCommitId } from "./ref-name.js";
 import { toSafeText } from "./safe-text.js";
 
 export const PROD_REMOTE = "origin";
@@ -54,24 +54,15 @@ export async function resolveProdRef(
         `${ref}^{commit}`,
       ]);
     } catch (error) {
-      if (
-        error instanceof GitCommandError &&
-        error.failure === "exit" &&
-        error.exitCode === 1
-      ) {
+      if (isNotFoundExit(error)) {
         continue;
       }
       throw error;
     }
-    const lines = output.split(/\r?\n/).filter((line) => line !== "");
-    const commit = lines[0];
-    if (lines.length !== 1 || commit === undefined || !isObjectId(commit)) {
-      throw new Error("git rev-parse did not return a single commit ID");
-    }
     return {
       branch,
       ref,
-      commit,
+      commit: parseSingleCommitId(output, "rev-parse"),
       source: ref.startsWith("refs/remotes/") ? "remote" : "local",
     };
   }

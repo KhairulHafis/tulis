@@ -2,11 +2,12 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { createTestRepo, type TestRepo } from "@tulis/testkit";
+import { cloneTestRepo, createTestRepo, type TestRepo } from "@tulis/testkit";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { findGit, type GitExecutable } from "./find-git.js";
 import {
   GIT_COMMANDS,
+  GIT_CONFIG_QUERIES,
   GitCommandError,
   buildGitArgs,
   buildStopCommand,
@@ -18,6 +19,7 @@ import {
 const HARDENING = [
   "--no-pager",
   "--no-replace-objects",
+  "--literal-pathspecs",
   "-c",
   "core.fsmonitor=false",
   "-c",
@@ -33,6 +35,7 @@ describe("buildGitArgs", () => {
     expect(build("rev-parse", ["HEAD"])).toEqual([
       "--no-pager",
       "--no-replace-objects",
+      "--literal-pathspecs",
       "-c",
       "core.fsmonitor=false",
       "-c",
@@ -45,9 +48,14 @@ describe("buildGitArgs", () => {
   it("adds the diff flags only to diff-tree, log and show", () => {
     const diffCommands = ["diff-tree", "log", "show"];
     for (const command of GIT_COMMANDS) {
-      const result = build(command, ["x"]);
+      const result = build(
+        command,
+        command === "config"
+          ? [...GIT_CONFIG_QUERIES.partialCloneExtension]
+          : ["x"],
+      );
       if (diffCommands.includes(command)) {
-        expect(result.slice(6, 9)).toEqual([
+        expect(result.slice(7, 10)).toEqual([
           command,
           "--no-ext-diff",
           "--no-textconv",
@@ -61,7 +69,24 @@ describe("buildGitArgs", () => {
 
   it("starts with the hardening items for every command", () => {
     for (const command of GIT_COMMANDS) {
-      expect(build(command, []).slice(0, 6)).toEqual(HARDENING);
+      const args =
+        command === "config"
+          ? [...GIT_CONFIG_QUERIES.partialCloneExtension]
+          : [];
+      expect(build(command, args).slice(0, 7)).toEqual(HARDENING);
+    }
+  });
+
+  it("adds --literal-pathspecs before the command for every command", () => {
+    for (const command of GIT_COMMANDS) {
+      const args =
+        command === "config"
+          ? [...GIT_CONFIG_QUERIES.partialCloneExtension]
+          : [];
+      const result = build(command, args);
+      const flagIndex = result.indexOf("--literal-pathspecs");
+      expect(flagIndex).toBeGreaterThanOrEqual(0);
+      expect(flagIndex).toBeLessThan(result.indexOf(command));
     }
   });
 
@@ -99,6 +124,63 @@ describe("buildGitArgs", () => {
     expect(() => {
       Reflect.apply(buildGitArgs, undefined, ["push", []]);
     }).toThrow('Unknown git command "push"');
+  });
+});
+
+const CONFIG_REFUSED =
+  "git config is allowed only for Tulis's fixed read-only lookups";
+
+describe("buildGitArgs config", () => {
+  it("accepts each fixed query and keeps it unchanged", () => {
+    for (const query of Object.values(GIT_CONFIG_QUERIES)) {
+      const result = build("config", [...query]);
+      expect(result.slice(result.indexOf("config") + 1)).toEqual([...query]);
+      expect(result).not.toContain("--no-ext-diff");
+      expect(result).not.toContain("--no-textconv");
+    }
+  });
+
+  it("refuses every other form with a message that hides the arguments", () => {
+    const [ext, remotes] = [
+      GIT_CONFIG_QUERIES.partialCloneExtension,
+      GIT_CONFIG_QUERIES.promisorRemotes,
+    ];
+    const refused: string[][] = [
+      [],
+      ["extensions.partialclone", "evil"],
+      ["--get", "extensions.partialclone"],
+      ["-z", "--get", "core.secretkey"],
+      ["-z", "--get", "extensions.partialclone", "extra"],
+      [...ext, "--unset"],
+      ["--unset", "extensions.partialclone"],
+      ["--add", "extensions.partialclone", "evil"],
+      ["--replace-all", "extensions.partialclone", "evil"],
+      ["--edit"],
+      ["--file", "evil.cfg", "--get", "extensions.partialclone"],
+      ["--global", ...ext],
+      ["--system", ...remotes],
+      [...remotes].reverse(),
+      [...remotes.slice(0, 3)],
+      ["-z", "--get", "EXTENSIONS.PARTIALCLONE"],
+    ];
+    for (const args of refused) {
+      expect(() => build("config", args)).toThrow(CONFIG_REFUSED);
+      try {
+        build("config", args);
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        const message = error instanceof Error ? error.message : "";
+        expect(message).toBe(CONFIG_REFUSED);
+        expect(message).not.toContain("evil");
+        expect(message).not.toContain("secretkey");
+      }
+    }
+  });
+
+  it("refuses a fixed query when paths are given", () => {
+    expect(() =>
+      build("config", [...GIT_CONFIG_QUERIES.partialCloneExtension], ["a.md"]),
+    ).toThrow(CONFIG_REFUSED);
   });
 });
 
@@ -151,6 +233,7 @@ describe("createGitRunner", () => {
 describe("GitRunner.run", () => {
   let git: GitExecutable;
   let repo: TestRepo | undefined;
+  let extraRepos: TestRepo[] = [];
 
   beforeAll(async () => {
     git = await findGit();
@@ -159,6 +242,10 @@ describe("GitRunner.run", () => {
   afterEach(() => {
     repo?.cleanup();
     repo = undefined;
+    for (const extra of extraRepos) {
+      extra.cleanup();
+    }
+    extraRepos = [];
   });
 
   async function setup(): Promise<{
@@ -267,5 +354,55 @@ describe("GitRunner.run", () => {
     await expect(runner.run("log", ["--"])).rejects.toThrow(
       'Pass file paths in "paths", not after "--" in args',
     );
+  }, 30_000);
+
+  it("refuses a config write before starting git", async () => {
+    const { runner } = await setup();
+    const args = ["extensions.partialclone", "evil"];
+    expect(() => build("config", args)).toThrow(CONFIG_REFUSED);
+    await expect(runner.run("config", args)).rejects.toThrow(CONFIG_REFUSED);
+    expect(() => runner.start("config", args)).toThrow(CONFIG_REFUSED);
+    expect(
+      await repo
+        ?.git(["config", "--get", "extensions.partialclone"])
+        .catch(() => ""),
+    ).toBe("");
+  }, 30_000);
+
+  it("config lookups fail with exit 1 in a normal repo", async () => {
+    const { runner } = await setup();
+    for (const query of Object.values(GIT_CONFIG_QUERIES)) {
+      const error = await failureOf(runner.run("config", [...query]));
+      expect(error.failure).toBe("exit");
+      expect(error.exitCode).toBe(1);
+    }
+  }, 30_000);
+
+  it("config lookups find a partial clone", async () => {
+    await setup();
+    if (repo === undefined) {
+      throw new Error("no repo");
+    }
+    const clone = await cloneTestRepo(repo, { partial: true });
+    extraRepos.push(clone);
+    const cloneRunner = createGitRunner(git, clone.dir);
+    // Modern git marks a partial clone with the promisor setting only.
+    const extension = await failureOf(
+      cloneRunner.run("config", [...GIT_CONFIG_QUERIES.partialCloneExtension]),
+    );
+    expect(extension.exitCode).toBe(1);
+    const remotes = await cloneRunner.run("config", [
+      ...GIT_CONFIG_QUERIES.promisorRemotes,
+    ]);
+    expect(remotes).toContain("remote.origin.promisor");
+    expect(remotes).toContain("true");
+  }, 30_000);
+
+  it("config reads extensions.partialclone when it is set", async () => {
+    const { runner } = await setup();
+    await repo?.git(["config", "extensions.partialclone", "origin"]);
+    expect(
+      await runner.run("config", [...GIT_CONFIG_QUERIES.partialCloneExtension]),
+    ).toContain("origin");
   }, 30_000);
 });

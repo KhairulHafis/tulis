@@ -341,4 +341,39 @@ describe("git runner security", () => {
     );
     expect(stdout.trim()).toHaveLength(20);
   }, 30_000);
+
+  // Proves a path is matched literally, never as a glob.
+  it("treats a path with glob characters literally", async () => {
+    const repo = await newRepo();
+    const files = { "a.md": "a1\n", "b.md": "b1\n", "[ab].md": "x1\n" };
+    const c1 = await repo.commit({ message: "one", files });
+    const c2 = await repo.commit({
+      message: "two",
+      files: { "a.md": "a2\n", "b.md": "b2\n", "[ab].md": "x2\n" },
+    });
+    const runner = createGitRunner(git, repo.dir);
+
+    const viaPena = await runner.run(
+      "diff-tree",
+      ["-r", "--name-only", c1, c2],
+      { paths: ["[ab].md"] },
+    );
+    expect(viaPena.trim().split(/\r?\n/)).toEqual(["[ab].md"]);
+
+    // Control: plain git without --literal-pathspecs treats it as a glob.
+    const plain = await repo.git([
+      "diff-tree",
+      "-r",
+      "--name-only",
+      c1,
+      c2,
+      "--",
+      "[ab].md",
+    ]);
+    expect(plain.trim().split(/\r?\n/).sort()).toEqual([
+      "[ab].md",
+      "a.md",
+      "b.md",
+    ]);
+  }, 30_000);
 });
