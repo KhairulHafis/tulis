@@ -270,3 +270,34 @@ export type {
   PartOfSpeech,
   VerbForm,
 } from "./language/tag-tokens.js";
+export {
+  MAX_OBSERVATION_VALUE_LENGTH,
+  MAX_EVIDENCE_LENGTH,
+  MAX_OBSERVATIONS_PER_EXTRACTOR,
+} from "./extract/observation.js";
+export type { Finding, Observation } from "./extract/observation.js";
+export type {
+  ExtractorScope,
+  BlockContext,
+  SentenceContext,
+  DocumentExtractor,
+  BlockExtractor,
+  SentenceExtractor,
+  Extractor,
+} from "./extract/extractor.js";
+export {
+  createExtractorRegistry,
+  ExtractorRegistryError,
+} from "./extract/registry.js";
+export type { ExtractorRegistry } from "./extract/registry.js";
+export { runExtractors } from "./extract/run-extractors.js";
+export type {
+  ExtractionProblemKind,
+  ExtractionProblem,
+  ExtractionResult,
+} from "./extract/run-extractors.js";
+export { compileGlob, findGlobProblem, GlobError } from "./globs/glob.js";
+export type { CompiledGlob, GlobProblem } from "./globs/glob.js";
+export { isDocTypeName } from "./doc-types/doc-type-name.js";
+export { createDocTypeResolver } from "./doc-types/resolve-doc-type.js";
+export type { DocType, DocTypeResolver } from "./doc-types/resolve-doc-type.js";
