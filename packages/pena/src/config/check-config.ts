@@ -1,3 +1,5 @@
+import { isDocTypeName } from "../doc-types/doc-type-name.js";
+import { findGlobProblem } from "../globs/glob.js";
 import { isValidBranchName } from "../git/ref-name.js";
 import { DEFAULT_CONFIG } from "./config-defaults.js";
 import { CONFIG_FORMAT_VERSION } from "./config-types.js";
@@ -70,7 +72,6 @@ const MAX_GLOB_LENGTH = 500;
 const MAX_COUNT = 1_000_000;
 const MAX_RULES = 100;
 const FRONTMATTER_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
-const RULE_TYPE = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$/;
 const DRIVE_LETTER = /^[A-Za-z]:/;
 
 /** The integer at `map[name]`, or `fallback` (with an error) when it is not one in range. */
@@ -176,7 +177,17 @@ function checkGlobList(
   for (let i = 0; i < value.length; i++) {
     const item: unknown = value[i];
     if (isValidGlob(item)) {
-      globs.push(item);
+      if (findGlobProblem(item) === undefined) {
+        globs.push(item);
+      } else {
+        allValid = false;
+        const itemPath = [...path, i];
+        addError(
+          ctx,
+          itemPath,
+          `${formatKey(itemPath)} uses pattern syntax Tulis doesn't support: extended patterns such as \`+(a|b)\`, classes such as \`[[:alpha:]]\`, and reversed ranges such as \`[z-a]\`.`,
+        );
+      }
     } else {
       allValid = false;
       const itemPath = [...path, i];
@@ -328,7 +339,7 @@ function checkRule(
     addError(ctx, path, `${ruleKey} needs a type.`);
   } else {
     const rawType = value["type"];
-    if (typeof rawType === "string" && RULE_TYPE.test(rawType)) {
+    if (typeof rawType === "string" && isDocTypeName(rawType)) {
       type = rawType;
     } else {
       addError(

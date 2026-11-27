@@ -322,6 +322,75 @@ describe("glob lists", () => {
   });
 });
 
+describe("unsupported pattern syntax", () => {
+  const MESSAGE =
+    "uses pattern syntax Tulis doesn't support: extended patterns such as `+(a|b)`, classes such as `[[:alpha:]]`, and reversed ranges such as `[z-a]`.";
+
+  it.each([
+    ["an extended pattern", "docs/+(a|b).md"],
+    ["a class", "docs/[[:alpha:]].md"],
+    ["a reversed range", "docs/[z-a].md"],
+  ])("rejects %s in include", (_name, bad) => {
+    const result = runWith({ include: ["ok/*.md", bad] }, { "include.1": 7 });
+    expect(only(result)).toEqual({
+      key: "include[2]",
+      line: 7,
+      message: `include[2] ${MESSAGE}`,
+    });
+    expect(result.config.include).toEqual(DEFAULT_CONFIG.include);
+  });
+
+  it.each(["*(a)", "?(a)", "+(a)", "@(a)", "x/!(a)"])(
+    "rejects %s in exclude",
+    (bad) => {
+      const result = runWith({ exclude: [bad] }, { "exclude.0": 4 });
+      expect(only(result)).toEqual({
+        key: "exclude[1]",
+        line: 4,
+        message: `exclude[1] ${MESSAGE}`,
+      });
+      expect(result.config.exclude).toEqual([]);
+    },
+  );
+
+  it.each(["x/[z-a]", "[[:digit:]]", "a/@(b|c)"])(
+    "rejects %s in a rule's include",
+    (bad) => {
+      const result = runWith(
+        { docTypes: { rules: [{ type: "A", include: ["ok/**", bad] }] } },
+        { "docTypes.rules.0.include.1": 15 },
+      );
+      expect(only(result)).toEqual({
+        key: "docTypes.rules[1].include[2]",
+        line: 15,
+        message: `docTypes.rules[1].include[2] ${MESSAGE}`,
+      });
+      expect(result.config.docTypes).toEqual(DEFAULT_CONFIG.docTypes);
+    },
+  );
+
+  it("reports every bad item", () => {
+    const result = runWith({ include: ["+(a)", "ok", "[z-a]", "\\bad"] });
+    expect(result.errors.map((issue) => issue.key)).toEqual([
+      "include[1]",
+      "include[3]",
+      "include[4]",
+    ]);
+  });
+
+  it("keeps the older message for an invalid pattern", () => {
+    const result = runWith({ include: ["/+(a)"] });
+    expect(only(result).message).toBe(`include[1] ${GLOB_ITEM_TEXT}`);
+  });
+
+  it("accepts supported syntax", () => {
+    const include = ["{a,b}/**/*.md", "[a-c]?.md", "(a|b).md", "[a-]x"];
+    const result = runWith({ include });
+    expect(result.errors).toEqual([]);
+    expect(result.config.include).toEqual(include);
+  });
+});
+
 describe("docTypes", () => {
   it("frontmatterKey", () => {
     for (const ok of ["type", "_x", "a-b_9", "a".repeat(64)]) {
@@ -681,14 +750,15 @@ describe("unknown keys", () => {
   });
 
   it("keeps escape and bidi characters out of the message and key", () => {
-    const name = "bad\u001b[31m‮evil";
+    const rightToLeft = String.fromCodePoint(0x202e);
+    const name = "bad\u001b[31m" + rightToLeft + "evil";
     const result = runWith({ [name]: 1 });
     expect(result.warnings).toHaveLength(1);
     const [warning] = result.warnings;
     for (const text of [warning?.key, warning?.message]) {
       expect(text).toBeDefined();
       expect(text).not.toContain("\u001b");
-      expect(text).not.toContain("‮");
+      expect(text).not.toContain(rightToLeft);
     }
   });
 
