@@ -320,5 +320,11 @@ export { createSynonymExtractor } from "./terms/synonym-extractor.js";
 export { createVerbNounExtractor } from "./terms/verb-noun-extractor.js";
 export { termRole } from "./terms/verb-noun-role.js";
 export type { TermRole } from "./terms/verb-noun-role.js";
+export { findPurposeClause } from "./phrasing/purpose-clause.js";
+export type {
+  PurposeClause,
+  PurposePosition,
+} from "./phrasing/purpose-clause.js";
+export { createPurposeClauseExtractor } from "./phrasing/purpose-clause-extractor.js";
 export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
 export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";

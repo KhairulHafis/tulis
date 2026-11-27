@@ -1,4 +1,5 @@
 import type { VariantGroup } from "../config/variants-types.js";
+import { createPurposeClauseExtractor } from "../phrasing/purpose-clause-extractor.js";
 import { createSynonymExtractor } from "../terms/synonym-extractor.js";
 import { createVerbNounExtractor } from "../terms/verb-noun-extractor.js";
 import type { Extractor } from "./extractor.js";
@@ -15,5 +16,6 @@ export function createBuiltInExtractors(
   return [
     createSynonymExtractor(options.groups),
     createVerbNounExtractor(options.groups),
+    createPurposeClauseExtractor(),
   ];
 }
