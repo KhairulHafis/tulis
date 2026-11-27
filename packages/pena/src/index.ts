@@ -317,5 +317,8 @@ export type {
   TermMatcher,
 } from "./terms/term-matcher.js";
 export { createSynonymExtractor } from "./terms/synonym-extractor.js";
+export { createVerbNounExtractor } from "./terms/verb-noun-extractor.js";
+export { termRole } from "./terms/verb-noun-role.js";
+export type { TermRole } from "./terms/verb-noun-role.js";
 export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
 export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";
