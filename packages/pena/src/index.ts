@@ -100,14 +100,19 @@ export { checkConfig, MAX_ISSUES } from "./config/check-config.js";
 export type { ConfigCheckResult } from "./config/check-config.js";
 export {
   parseYaml,
+  parseYamlDocument,
+  serializeYamlDocument,
   YamlParseError,
   DEFAULT_MAX_YAML_BYTES,
   DEFAULT_MAX_YAML_ALIASES,
   DEFAULT_MAX_YAML_DEPTH,
 } from "./config/parse-yaml.js";
 export type {
+  LineEnding,
   ParsedYaml,
+  ParsedYamlDocument,
   ParseYamlOptions,
+  SerializeYamlOptions,
   YamlPath,
 } from "./config/parse-yaml.js";
 export {
@@ -125,6 +130,15 @@ export {
   DEFAULT_MAX_FILE_SIZE,
 } from "./config/file-size.js";
 export { CONFIG_FORMAT_VERSION } from "./config/config-types.js";
+export { formatTeamIssue, TeamFileUseError } from "./config/team-issue.js";
+export type { TeamIssue } from "./config/team-issue.js";
+export {
+  readFileVersion,
+  MISSING_VERSION_MESSAGE,
+  INVALID_VERSION_MESSAGE,
+  newerVersionMessage,
+} from "./config/file-version.js";
+export type { FileVersion } from "./config/file-version.js";
 export type {
   TulisConfig,
   DocTypesConfig,
@@ -135,3 +149,63 @@ export type {
   ConfigPath,
   LineLookup,
 } from "./config/config-types.js";
+export {
+  TULIS_FOLDER,
+  TeamFileError,
+  readTeamFile,
+  listTeamFiles,
+  writeTeamFile,
+} from "./config/team-file.js";
+export type {
+  TeamPath,
+  TeamFileRead,
+  WriteTeamFileOptions,
+} from "./config/team-file.js";
+export {
+  VARIANTS_FORMAT_VERSION,
+  EMPTY_TEAM_VARIANTS,
+} from "./config/variants-types.js";
+export type {
+  VariantSource,
+  SynonymGroup,
+  VerbNounGroup,
+  VariantGroup,
+  RejectedGroup,
+  TeamVariants,
+} from "./config/variants-types.js";
+export { checkVariants, rejectedKey } from "./config/check-variants.js";
+export type { VariantsCheckResult } from "./config/check-variants.js";
+export {
+  VARIANTS_FILE,
+  MAX_VARIANTS_BYTES,
+  readVariantsFile,
+  loadVariants,
+} from "./config/load-variants.js";
+export type { LoadedVariants, VariantsFile } from "./config/load-variants.js";
+export {
+  decisionsFileName,
+  isDecisionsFileName,
+} from "./config/writer-file.js";
+export {
+  DECISIONS_FORMAT_VERSION,
+  DECISIONS_FOLDER,
+} from "./config/decisions-types.js";
+export type { Dismissal, WriterDecisions } from "./config/decisions-types.js";
+export { checkDecisions } from "./config/check-decisions.js";
+export type { DecisionsCheckResult } from "./config/check-decisions.js";
+export {
+  loadDecisions,
+  readDecisionsFile,
+  DECISIONS_FILE_PREFIX,
+  MAX_DECISIONS_BYTES,
+  MAX_DECISIONS_FILES,
+  MAX_DECISIONS_WARNINGS,
+} from "./config/load-decisions.js";
+export type {
+  LoadedDecisions,
+  DecisionsFile,
+} from "./config/load-decisions.js";
+export type { TeamFileEditOutcome } from "./config/edit-team-file.js";
+export { addConfirmedGroup, addRejectedGroup } from "./config/edit-variants.js";
+export type { ConfirmedGroup } from "./config/edit-variants.js";
+export { recordDismissal } from "./config/edit-decisions.js";

@@ -1,7 +1,6 @@
 import { isValidBranchName } from "../git/ref-name.js";
-import { toSafeText } from "../git/safe-text.js";
-import { closestKey } from "./closest-key.js";
 import { DEFAULT_CONFIG } from "./config-defaults.js";
+import { CONFIG_FORMAT_VERSION } from "./config-types.js";
 import type {
   ConfidenceWeights,
   ConfigIssue,
@@ -12,6 +11,21 @@ import type {
   TuningConfig,
   TulisConfig,
 } from "./config-types.js";
+import {
+  INVALID_VERSION_MESSAGE,
+  MISSING_VERSION_MESSAGE,
+  readFileVersion,
+} from "./file-version.js";
+import {
+  addError,
+  addIssue,
+  finishList,
+  formatKey,
+  isMap,
+  isSet,
+  warnUnknownKeys,
+} from "./issue-collector.js";
+import type { Checker, ConfigMap } from "./issue-collector.js";
 import {
   MAX_MAX_FILE_SIZE,
   MIN_MAX_FILE_SIZE,
@@ -26,7 +40,7 @@ export interface ConfigCheckResult {
   readonly warnings: readonly ConfigIssue[];
 }
 
-export const MAX_ISSUES = 20;
+export { MAX_ISSUES } from "./issue-collector.js";
 
 const TOP_KEYS = [
   "version",
@@ -58,94 +72,6 @@ const MAX_RULES = 100;
 const FRONTMATTER_KEY = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 const RULE_TYPE = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$/;
 const DRIVE_LETTER = /^[A-Za-z]:/;
-
-type ConfigMap = Record<string, unknown>;
-
-/** Collects issues of one kind and keeps only the first MAX_ISSUES. */
-interface IssueList {
-  readonly kept: ConfigIssue[];
-  total: number;
-}
-
-interface Checker {
-  readonly lineOf: LineLookup | undefined;
-  readonly errors: IssueList;
-  readonly warnings: IssueList;
-}
-
-function isMap(value: unknown): value is ConfigMap {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** True when the map has its own `name` key with a value other than null (null means "not set"). */
-function isSet(map: ConfigMap, name: string): boolean {
-  return Object.hasOwn(map, name) && map[name] !== null;
-}
-
-/** "docTypes.rules[2].include": list positions are shown 1-based. */
-function formatKey(path: ConfigPath): string {
-  let key = "";
-  for (const part of path) {
-    if (typeof part === "number") {
-      key += `[${String(part + 1)}]`;
-    } else {
-      key += key === "" ? part : `.${part}`;
-    }
-  }
-  return key;
-}
-
-function addIssue(list: IssueList, issue: ConfigIssue): void {
-  list.total += 1;
-  if (list.kept.length < MAX_ISSUES) {
-    list.kept.push(issue);
-  }
-}
-
-function finishList(list: IssueList, noun: string): ConfigIssue[] {
-  const result = [...list.kept];
-  if (list.total > MAX_ISSUES) {
-    result.push({
-      key: "",
-      line: undefined,
-      message: `${String(list.total - MAX_ISSUES)} more ${noun} not shown.`,
-    });
-  }
-  return result;
-}
-
-/** Records an error for the setting at `path`. */
-function addError(ctx: Checker, path: ConfigPath, message: string): void {
-  addIssue(ctx.errors, {
-    key: formatKey(path),
-    line: ctx.lineOf?.(path),
-    message,
-  });
-}
-
-/** Warns about each key in `map` that is not in `known`. */
-function warnUnknownKeys(
-  ctx: Checker,
-  map: ConfigMap,
-  known: readonly string[],
-  path: ConfigPath,
-): void {
-  const parentKey = formatKey(path);
-  for (const name of Object.keys(map)) {
-    if (known.includes(name)) {
-      continue;
-    }
-    const safe = toSafeText(name, { maxLength: 60 });
-    const suggestion = closestKey(name, known);
-    const hint =
-      suggestion === undefined ? "" : ` Did you mean "${suggestion}"?`;
-    addIssue(ctx.warnings, {
-      key: parentKey === "" ? safe : `${parentKey}.${safe}`,
-      line: ctx.lineOf?.([...path, name]),
-      message: `Unknown key "${safe}" is ignored.${hint}`,
-    });
-  }
-}
 
 /** The integer at `map[name]`, or `fallback` (with an error) when it is not one in range. */
 function readInteger(
@@ -499,24 +425,17 @@ function checkTopLevel(
   warnUnknownKeys(ctx, map, TOP_KEYS, []);
 
   let fileVersion: number | undefined;
-  if (!isSet(map, "version")) {
+  const found = readFileVersion(map, CONFIG_FORMAT_VERSION);
+  if (found.status === "missing") {
     addIssue(ctx.warnings, {
       key: "version",
       line: undefined,
-      message:
-        "No version line, so the file is read as version 1. Add `version: 1` at the top.",
+      message: MISSING_VERSION_MESSAGE,
     });
+  } else if (found.status === "invalid") {
+    addError(ctx, ["version"], INVALID_VERSION_MESSAGE);
   } else {
-    const version = map["version"];
-    if (
-      typeof version === "number" &&
-      Number.isSafeInteger(version) &&
-      version >= 1
-    ) {
-      fileVersion = version;
-    } else {
-      addError(ctx, ["version"], "version must be a whole number, 1 or more.");
-    }
+    fileVersion = found.version;
   }
 
   let prodBranch = defaults.prodBranch;
