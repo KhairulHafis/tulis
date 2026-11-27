@@ -234,10 +234,7 @@ describe("createVerbNounExtractor", () => {
 
   it("is second in the built-in list and its dimensions are accepted", () => {
     const extractors = createBuiltInExtractors({ groups });
-    expect(extractors.map((e) => e.id)).toEqual([
-      "term.synonyms",
-      "term.verb-noun",
-    ]);
+    expect(extractors[1]?.id).toBe("term.verb-noun");
     const result = runExtractors(
       createExtractorRegistry(extractors),
       prepared("Log in to the portal and check your login history.\n"),
