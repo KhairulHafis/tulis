@@ -221,6 +221,14 @@ export type {
   PrepareResult,
 } from "./prepare/prepare-doc.js";
 export type { PrepareSkipReason } from "./prepare/prepare-doc.js";
+export {
+  createDocPreparer,
+  PREPARE_TIME_LIMIT_MS,
+} from "./prepare/doc-preparer.js";
+export type {
+  DocPreparer,
+  DocPreparerOptions,
+} from "./prepare/doc-preparer.js";
 export { sentenceTags } from "./prepare/sentence-tags.js";
 export { syntaxForPath } from "./markdown/parse-markdown.js";
 export type {
