@@ -301,3 +301,21 @@ export type { CompiledGlob, GlobProblem } from "./globs/glob.js";
 export { isDocTypeName } from "./doc-types/doc-type-name.js";
 export { createDocTypeResolver } from "./doc-types/resolve-doc-type.js";
 export type { DocType, DocTypeResolver } from "./doc-types/resolve-doc-type.js";
+export {
+  parseSeedGroups,
+  loadSeedGroups,
+  SeedListError,
+} from "./terms/seed-groups.js";
+export { resolveVariantGroups } from "./terms/resolve-groups.js";
+export type { ResolvedGroups } from "./terms/resolve-groups.js";
+export { termKey } from "./terms/term-key.js";
+export { inflectedForms } from "./terms/word-forms.js";
+export { createTermMatcher } from "./terms/term-matcher.js";
+export type {
+  TermEntry,
+  TermMatch,
+  TermMatcher,
+} from "./terms/term-matcher.js";
+export { createSynonymExtractor } from "./terms/synonym-extractor.js";
+export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
+export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";

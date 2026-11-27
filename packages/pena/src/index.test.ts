@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  createBuiltInExtractors,
   createExtractorRegistry,
   engineName,
+  parseSeedGroups,
   prepareDoc,
   runExtractors,
 } from "./index.js";
@@ -47,6 +49,23 @@ describe("pena", () => {
         line: 1,
         text: "Hello there.",
       },
+    ]);
+  });
+
+  it("runs the built-in extractors through the exports", () => {
+    const doc = prepareDoc("Please log in.\n", "markdown");
+    if (doc.kind !== "prepared") {
+      throw new Error("expected a prepared doc");
+    }
+    const groups = parseSeedGroups(
+      'version: 1\ngroups:\n  - id: sign-in\n    kind: synonym\n    variants: ["log in", "sign in"]\n',
+    );
+    const result = runExtractors(
+      createExtractorRegistry(createBuiltInExtractors({ groups })),
+      doc,
+    );
+    expect(result.observations.map((o) => [o.dimension, o.value])).toEqual([
+      ["term.sign-in", "log in"],
     ]);
   });
 });

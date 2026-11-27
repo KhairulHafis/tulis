@@ -1,0 +1,18 @@
+version: 1
+groups:
+  - id: sign-in
+    kind: synonym
+    variants: ["log in", "sign in", "log on"]
+  - id: select
+    kind: synonym
+    variants: ["click", "select", "choose"]
+  - id: for-example
+    kind: synonym
+    variants: ["e.g.", "for example"]
+  - id: access-token
+    kind: synonym
+    variants: ["access token", "API token"]
+  - id: login-form
+    kind: verb-noun
+    noun: "login"
+    verb: "log in"
