@@ -1,3 +1,9 @@
+import {
+  isCheckId,
+  MAX_CHECK_LENGTH,
+  MAX_CHECK_PARTS,
+  MIN_CHECK_PARTS,
+} from "../check-id.js";
 import type { ConfigPath, LineLookup } from "./config-types.js";
 import { DECISIONS_FORMAT_VERSION } from "./decisions-types.js";
 import type { Dismissal } from "./decisions-types.js";
@@ -31,30 +37,14 @@ const TOP_KEYS = ["version", "dismissals"] as const;
 const ENTRY_KEYS = ["check", "count", "last"] as const;
 
 const MAX_ENTRIES = 1000;
-const MAX_CHECK_LENGTH = 128;
-const MIN_CHECK_PARTS = 2;
-const MAX_CHECK_PARTS = 4;
 const MAX_COUNT = 1_000_000;
 const MIN_YEAR = 2000;
 const MAX_YEAR = 2999;
-const CHECK_PART = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const CHECK_MESSAGE = `must be a check ID of ${String(MIN_CHECK_PARTS)} to ${String(MAX_CHECK_PARTS)} parts joined by dots, such as term.sign-in (lower-case letters, digits and hyphens, at most ${String(MAX_CHECK_LENGTH)} characters).`;
 const COUNT_MESSAGE = `must be a whole number from 1 to ${MAX_COUNT.toLocaleString("en-US")}.`;
 const LAST_MESSAGE = `must be a day written as YYYY-MM-DD, such as "2026-11-27", with a year from ${String(MIN_YEAR)} to ${String(MAX_YEAR)} and no time.`;
-
-function isCheckId(value: string): boolean {
-  if (value.length > MAX_CHECK_LENGTH) {
-    return false;
-  }
-  const parts = value.split(".");
-  return (
-    parts.length >= MIN_CHECK_PARTS &&
-    parts.length <= MAX_CHECK_PARTS &&
-    parts.every((part) => CHECK_PART.test(part))
-  );
-}
 
 function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
