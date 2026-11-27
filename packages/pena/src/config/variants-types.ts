@@ -1,7 +1,10 @@
 export const VARIANTS_FORMAT_VERSION = 1;
 
-/** "team" when the group has no `source` key. */
-export type VariantSource = "team" | "discovered";
+/**
+ * "team" when the group has no `source` key. "seed" is only for groups from
+ * the shipped seed list; checkVariants never produces it.
+ */
+export type VariantSource = "seed" | "team" | "discovered";
 
 /** A group of words that mean the same thing. */
 export interface SynonymGroup {
