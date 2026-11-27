@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { YamlParseError, parseYaml } from "./parse-yaml.js";
+import { YamlParseError, parseYaml, parseYamlDocument } from "./parse-yaml.js";
 
 function errorOf(text: string, options?: Parameters<typeof parseYaml>[1]) {
   try {
@@ -239,5 +239,52 @@ describe("error messages", () => {
     const error = errorOf("a: !" + "x".repeat(5000) + " y\n");
     expect(error.message).not.toContain("\n");
     expect(error.message.length).toBeLessThan(300);
+  });
+});
+
+describe("parseYamlDocument refuses the same attacks as parseYaml", () => {
+  const manyAliases =
+    "base: &b 1\n" +
+    Array.from({ length: 11 }, (_, i) => `k${String(i)}: *b`).join("\n") +
+    "\n";
+  const deepLists = "[".repeat(40) + "]".repeat(40);
+  const cases: readonly (readonly [
+    string,
+    string,
+    Parameters<typeof parseYaml>[1],
+  ])[] = [
+    ["alias bomb", aliasBomb(), undefined],
+    ["too many aliases", manyAliases, undefined],
+    ["alias to a missing anchor", "a: *nope\n", undefined],
+    ["deep nesting", deepLists, undefined],
+    ["recursive alias", "a: &x [*x]\n", undefined],
+    ["size", "a: " + "x".repeat(100), { maxBytes: 50 }],
+    ["!!binary", "a: !!binary aGVsbG8=", undefined],
+    ["!!timestamp", "a: !!timestamp 2026-01-01", undefined],
+    ["!!set", "a: !!set {x}", undefined],
+    ["custom tag", "a: !custom x", undefined],
+    ["numeric key", "a: 1\n2: x\n", undefined],
+    ["complex key", "a: 1\n? [a]\n: x\n", undefined],
+    ["duplicate keys", "a: 1\nb: 2\na: 3\n", undefined],
+    ["two documents", "a: 1\n---\nb: 2\n", undefined],
+    ["YAML 1.1 directive", "%YAML 1.1\n---\na: 1\n", undefined],
+  ];
+
+  it.each(cases)("%s", (_name, text, options) => {
+    const expected = errorOf(text, options);
+    let actual: unknown;
+    try {
+      parseYamlDocument(text, options);
+    } catch (error) {
+      actual = error;
+    }
+    expect(actual).toBeInstanceOf(YamlParseError);
+    expect((actual as YamlParseError).message).toBe(expected.message);
+    expect((actual as YamlParseError).line).toBe(expected.line);
+  });
+
+  it("does not merge << keys", () => {
+    const text = "base: &base\n  x: 1\nchild:\n  <<: *base\n";
+    expect(parseYamlDocument(text).value).toEqual(parseYaml(text).value);
   });
 });

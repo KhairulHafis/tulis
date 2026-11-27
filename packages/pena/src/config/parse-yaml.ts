@@ -241,11 +241,13 @@ function parseOrExplain(
   }
 }
 
-/** Parses YAML text from an untrusted file into plain data. */
-export function parseYaml(
-  text: string,
-  options: ParseYamlOptions = {},
-): ParsedYaml {
+interface ParsedInternal extends ParsedYaml {
+  readonly document: Document.Parsed;
+  readonly lineCounter: LineCounter;
+}
+
+/** The one place that parses and checks untrusted YAML. */
+function parseChecked(text: string, options: ParseYamlOptions): ParsedInternal {
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_YAML_BYTES;
   const maxAliases = options.maxAliases ?? DEFAULT_MAX_YAML_ALIASES;
   const maxDepth = options.maxDepth ?? DEFAULT_MAX_YAML_DEPTH;
@@ -298,5 +300,139 @@ export function parseYaml(
   return {
     value,
     lineOf: (path) => findLine(doc, lineCounter, path),
+    document: doc,
+    lineCounter,
   };
+}
+
+/** Parses YAML text from an untrusted file into plain data. */
+export function parseYaml(
+  text: string,
+  options: ParseYamlOptions = {},
+): ParsedYaml {
+  const { value, lineOf } = parseChecked(text, options);
+  return { value, lineOf };
+}
+
+export type LineEnding = "\n" | "\r\n";
+
+export interface ParsedYamlDocument extends ParsedYaml {
+  /** The parsed document. Edit it with yaml's document API (for example doc.setIn, doc.addIn), never by rebuilding it from plain data. `lineOf` answers refer to the original text, so they go stale after edits. */
+  readonly document: Document.Parsed;
+  /** "\r\n" when the text's first line break is CRLF, otherwise "\n". */
+  readonly lineEnding: LineEnding;
+  /** True when the text starts with a UTF-8 byte order mark (U+FEFF). */
+  readonly hasBom: boolean;
+  /**
+   * False when the file's first block list under a map key starts in the same
+   * column as its key (`key:\n- a`), true when it is indented or when the
+   * file has no such list. Pass it back to serializeYamlDocument.
+   */
+  readonly indentSeq: boolean;
+}
+
+function columnOf(lineCounter: LineCounter, node: Node): number | undefined {
+  const offset = node.range?.[0];
+  return offset === undefined ? undefined : lineCounter.linePos(offset).col;
+}
+
+interface Entry {
+  readonly key: Node | null;
+  readonly value: Node | null;
+}
+
+/** Looks at the first block list that is a map value, in document order. */
+function detectIndentSeq(root: Node | null, lineCounter: LineCounter): boolean {
+  const stack: Entry[] = [{ key: null, value: root }];
+  for (let entry = stack.pop(); entry !== undefined; entry = stack.pop()) {
+    const { key, value } = entry;
+    if (value === null || isAlias(value)) {
+      continue;
+    }
+    if (isSeq(value) && value.flow !== true && key !== null) {
+      const keyColumn = columnOf(lineCounter, key);
+      const seqColumn = columnOf(lineCounter, value);
+      if (keyColumn !== undefined && seqColumn !== undefined) {
+        return seqColumn > keyColumn;
+      }
+    }
+    if (isMap(value)) {
+      for (const pair of [...value.items].reverse()) {
+        stack.push({ key: asNode(pair.key), value: asNode(pair.value) });
+      }
+    } else if (isSeq(value)) {
+      for (const item of [...value.items].reverse()) {
+        stack.push({ key: null, value: asNode(item) });
+      }
+    }
+  }
+  return true;
+}
+
+function detectLineEnding(text: string): LineEnding {
+  const lf = text.indexOf("\n");
+  return lf > 0 && text[lf - 1] === "\r" ? "\r\n" : "\n";
+}
+
+/** Parses untrusted YAML into an editable document. Same checks and errors as parseYaml. */
+export function parseYamlDocument(
+  text: string,
+  options: ParseYamlOptions = {},
+): ParsedYamlDocument {
+  const { value, lineOf, document, lineCounter } = parseChecked(text, options);
+  return {
+    value,
+    lineOf,
+    document,
+    indentSeq: detectIndentSeq(document.contents, lineCounter),
+    lineEnding: detectLineEnding(text),
+    hasBom: text.startsWith("\uFEFF"),
+  };
+}
+
+export interface SerializeYamlOptions extends ParseYamlOptions {
+  readonly lineEnding?: LineEnding; // default "\n"
+  readonly bom?: boolean; // default false
+  /** Print block lists under a map key indented. Default true. */
+  readonly indentSeq?: boolean;
+}
+
+/**
+ * Turns an edited document back into text, then parses that text again with
+ * the same limits (throws YamlParseError if it would not read back, for
+ * example because it grew past maxBytes).
+ *
+ * `lineOf` answers refer to the original text, so they go stale after edits.
+ * yaml prints one space before an end-of-line comment, so extra spaces there
+ * are not kept, and a comment at the very end of the file gets a blank line
+ * before it.
+ */
+export function serializeYamlDocument(
+  document: Document,
+  options: SerializeYamlOptions = {},
+): string {
+  let text: string;
+  try {
+    // lineWidth 0 stops long strings from being folded; no padding keeps
+    // flow lists as written: ["a", "b"].
+    text = document.toString({
+      lineWidth: 0,
+      flowCollectionPadding: false,
+      indentSeq: options.indentSeq ?? true,
+    });
+  } catch (error) {
+    if (isStackOverflow(error)) {
+      throw new YamlParseError(NESTING_MESSAGE, undefined, { cause: error });
+    }
+    throw error;
+  }
+  if (options.lineEnding === "\r\n") {
+    text = text.replaceAll("\n", "\r\n");
+  }
+  if (options.bom === true) {
+    text = `\uFEFF${text}`;
+  }
+  // Prove the text reads back under the same rules.
+  parseChecked(text, options);
+  return text;
 }
