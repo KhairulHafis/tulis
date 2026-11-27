@@ -209,3 +209,56 @@ export type { TeamFileEditOutcome } from "./config/edit-team-file.js";
 export { addConfirmedGroup, addRejectedGroup } from "./config/edit-variants.js";
 export type { ConfirmedGroup } from "./config/edit-variants.js";
 export { recordDismissal } from "./config/edit-decisions.js";
+export { prepareDoc } from "./prepare/prepare-doc.js";
+export type {
+  PrepareOptions,
+  PreparedSentence,
+  PreparedBlock,
+  PreparedTitle,
+  PrepareWarning,
+  PreparedDoc,
+  SkippedDoc,
+  PrepareResult,
+} from "./prepare/prepare-doc.js";
+export type { PrepareSkipReason } from "./prepare/prepare-doc.js";
+export { sentenceTags } from "./prepare/sentence-tags.js";
+export { syntaxForPath } from "./markdown/parse-markdown.js";
+export type {
+  MarkdownSyntax,
+  ParsedMarkdown,
+  Frontmatter,
+} from "./markdown/parse-markdown.js";
+export { createProductNameMatcher } from "./markdown/product-names.js";
+export type { ProductNameMatcher } from "./markdown/product-names.js";
+export {
+  LANGUAGE_FIELDS,
+  MAX_FRONTMATTER_BYTES,
+  MAX_FRONTMATTER_FIELDS,
+  MAX_FRONTMATTER_VALUE_LENGTH,
+} from "./markdown/frontmatter-data.js";
+export type {
+  FrontmatterData,
+  FrontmatterWarning,
+  FrontmatterWarningCode,
+} from "./markdown/frontmatter-data.js";
+export type {
+  MaskedText,
+  MaskedSegment,
+  Placeholder,
+  PlaceholderKind,
+} from "./markdown/masked-text.js";
+export type {
+  SourceRange,
+  IgnoredRange,
+  IgnoreWarning,
+  IgnoreWarningCode,
+} from "./markdown/ignored-ranges.js";
+export type { LineColumn } from "./markdown/source-lines.js";
+export type { ProseUnitKind } from "./markdown/prose-units.js";
+export type { MaskableBlock } from "./markdown/mask-block.js";
+export type { Token, TokenKind } from "./language/tokens.js";
+export type {
+  TaggedToken,
+  PartOfSpeech,
+  VerbForm,
+} from "./language/tag-tokens.js";
