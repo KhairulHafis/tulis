@@ -10,9 +10,17 @@
     }
   },
   "devDependencies": {
-    "@tulis/testkit": "workspace:*"
+    "@tulis/testkit": "workspace:*",
+    "@types/mdast": "4.0.4"
   },
   "dependencies": {
+    "remark-directive": "4.0.0",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-mdx": "3.1.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.2.0",
     "yaml": "2.9.1"
   }
 }

@@ -3,3 +3,4 @@ dist/
 coverage/
 .cache/
 *.tsbuildinfo
+packages/pena/src/markdown/fixtures/
