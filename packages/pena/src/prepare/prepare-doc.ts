@@ -82,8 +82,13 @@ export interface PreparedDoc {
   readonly moreWarnings: number;
 }
 
+/** "time-limit" is set by the doc preparer when a doc runs over its time. */
 export type PrepareSkipReason =
-  "invalid-mdx" | "too-deep" | "non-english" | "preparation-error";
+  | "invalid-mdx"
+  | "too-deep"
+  | "non-english"
+  | "preparation-error"
+  | "time-limit";
 
 export interface SkippedDoc {
   readonly kind: "skipped";
