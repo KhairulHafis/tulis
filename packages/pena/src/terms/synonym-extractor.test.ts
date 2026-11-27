@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { VariantGroup } from "../config/variants-types.js";
-import { createBuiltInExtractors } from "../extract/built-in-extractors.js";
 import { createExtractorRegistry } from "../extract/registry.js";
 import { runExtractors } from "../extract/run-extractors.js";
 import { prepareDoc, type PreparedDoc } from "../prepare/prepare-doc.js";
+import { createSynonymExtractor } from "./synonym-extractor.js";
 import { parseSeedGroups } from "./seed-groups.js";
 
 const fixtureGroups = parseSeedGroups(
@@ -22,7 +22,7 @@ function prepared(text: string): PreparedDoc {
 function run(text: string, groups: readonly VariantGroup[] = fixtureGroups) {
   const doc = prepared(text);
   const result = runExtractors(
-    createExtractorRegistry(createBuiltInExtractors({ groups })),
+    createExtractorRegistry([createSynonymExtractor(groups)]),
     doc,
   );
   return {
@@ -97,9 +97,9 @@ describe("term.synonyms extractor", () => {
   });
 
   it("has the id term.synonyms and runs on every block kind", () => {
-    const [extractor] = createBuiltInExtractors({ groups: fixtureGroups });
-    expect(extractor?.id).toBe("term.synonyms");
-    expect(extractor?.scope).toBe("sentence");
+    const extractor = createSynonymExtractor(fixtureGroups);
+    expect(extractor.id).toBe("term.synonyms");
+    expect(extractor.scope).toBe("sentence");
     expect(
       run("| a |\n| - |\n| log in |\n").pairs.map((pair) => pair[1]),
     ).toEqual(["log in"]);

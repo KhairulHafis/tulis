@@ -13,10 +13,11 @@ const groups: readonly VariantGroup[] = [
 ];
 
 describe("createBuiltInExtractors", () => {
-  it("lists the synonym extractor first", () => {
+  it("lists the synonym extractor first, then the verb-noun one", () => {
     const extractors = createBuiltInExtractors({ groups });
     expect(extractors.map((extractor) => extractor.id)).toEqual([
       "term.synonyms",
+      "term.verb-noun",
     ]);
   });
 
