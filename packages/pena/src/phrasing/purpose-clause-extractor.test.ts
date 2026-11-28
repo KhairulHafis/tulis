@@ -71,8 +71,10 @@ describe("createPurposeClauseExtractor", () => {
     expect(result.observations).toEqual([]);
   });
 
-  it("is the last built-in extractor", () => {
+  it("is in the built-in list", () => {
     const extractors = createBuiltInExtractors({ groups: [] });
-    expect(extractors.at(-1)?.id).toBe("phrasing.purpose-clause");
+    expect(extractors.map((extractor) => extractor.id)).toContain(
+      "phrasing.purpose-clause",
+    );
   });
 });

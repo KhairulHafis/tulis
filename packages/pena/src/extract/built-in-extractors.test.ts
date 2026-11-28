@@ -13,18 +13,24 @@ const groups: readonly VariantGroup[] = [
 ];
 
 describe("createBuiltInExtractors", () => {
-  it("lists the synonym extractor first, the verb-noun one, then purpose clauses", () => {
+  it("lists synonyms, verb-noun, purpose clauses, heading case, then heading end punctuation", () => {
     const extractors = createBuiltInExtractors({ groups });
     expect(extractors.map((extractor) => extractor.id)).toEqual([
       "term.synonyms",
       "term.verb-noun",
       "phrasing.purpose-clause",
+      "heading.case",
+      "heading.end-punct",
     ]);
   });
 
-  it("includes the purpose-clause extractor last, with no groups", () => {
+  it("includes the heading extractors last, with no groups", () => {
     const extractors = createBuiltInExtractors({ groups: [] });
-    expect(extractors.at(-1)?.id).toBe("phrasing.purpose-clause");
+    expect(extractors.slice(-3).map((e) => e.id)).toEqual([
+      "phrasing.purpose-clause",
+      "heading.case",
+      "heading.end-punct",
+    ]);
   });
 
   it("returns the same ids every time, and they register without clashes", () => {

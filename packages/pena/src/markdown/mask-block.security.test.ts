@@ -1,5 +1,5 @@
 import type { Paragraph } from "mdast";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { expectLinearTime, repeatToSize } from "@tulis/testkit";
 import { maskBlock } from "./mask-block.js";
 import { parseMarkdown, type ParsedMarkdown } from "./parse-markdown.js";
@@ -60,4 +60,55 @@ describe("maskBlock on hostile input", () => {
       });
     });
   }
+});
+
+describe("maskBlock heading IDs on hostile headings", () => {
+  const hostile: [string, string, string][] = [
+    ["spaces then x", "## ", " "],
+    ["open groups", "## ", "{#a "],
+    ["closed groups", "## ", "{#a} "],
+    ["braces", "## ", "{{#a}"],
+  ];
+  for (const [name, head, unit] of hostile) {
+    it("stays linear for " + name, () => {
+      expectLinearTime({
+        prepare: (size) => {
+          const text =
+            head +
+            repeatToSize(unit, size) +
+            (name === "spaces then x" ? "x" : "");
+          const parsed = parseMarkdown(text, "markdown");
+          if (parsed.kind !== "parsed") {
+            throw new Error("did not parse");
+          }
+          const block = parsed.tree.children[0];
+          if (block?.type !== "heading") {
+            throw new Error("not a heading");
+          }
+          return () => maskBlock(block, parsed);
+        },
+        probe: { size: 8 * 1024, limitMs: 50 },
+        sizes: [32 * 1024, 128 * 1024],
+        smallLimitMs: 100,
+        largeLimitMs: 200,
+        slack: 4,
+        floorMs: 50,
+      });
+    });
+  }
+
+  it("gives the right text for a big heading ending in an ID", () => {
+    const parsed = parseMarkdown(
+      "## " + "a ".repeat(10_000) + "{#id}\n",
+      "markdown",
+    );
+    if (parsed.kind !== "parsed") {
+      throw new Error("did not parse");
+    }
+    const block = parsed.tree.children[0];
+    if (block?.type !== "heading") {
+      throw new Error("not a heading");
+    }
+    expect(maskBlock(block, parsed).text).toBe("a ".repeat(10_000).trimEnd());
+  });
 });

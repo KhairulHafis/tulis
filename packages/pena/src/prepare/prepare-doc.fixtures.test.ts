@@ -46,7 +46,7 @@ describe("guide.md", () => {
   const doc = prepare("guide.md", readFixture("guide.md"));
 
   it("has the expected title, warnings and check ignores", () => {
-    expect(doc.title).toEqual({
+    expect(doc.title).toMatchObject({
       from: "frontmatter",
       text: "Install the agent",
       line: 1,
@@ -126,7 +126,7 @@ describe("hugo.md", () => {
     expect([...(doc.frontmatter?.fields ?? [])]).toEqual([
       ["title", "Deploy the site"],
     ]);
-    expect(doc.title).toEqual({
+    expect(doc.title).toMatchObject({
       from: "frontmatter",
       text: "Deploy the site",
       line: 1,

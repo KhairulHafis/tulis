@@ -1,4 +1,5 @@
 import type { Heading, Paragraph, RootContent, TableCell, Text } from "mdast";
+import { findHeadingId, type HeadingIdCut } from "./heading-id.js";
 import { mdxCommentBody } from "./ignore-comment.js";
 import {
   MaskedTextBuilder,
@@ -216,6 +217,36 @@ function runsBetween(
   return sliceRuns(runs.slice(low, stop), from, to);
 }
 
+/**
+ * The value range of a text node that a heading ID covers, or undefined when
+ * the cut would split an atomic run (an escape or entity) and so can't be exact.
+ */
+function idValueRange(
+  runs: readonly TextRun[],
+  cut: HeadingIdCut,
+): Span | undefined {
+  let start: number | undefined;
+  let end = 0;
+  for (const run of runs) {
+    if (run.sourceEnd <= cut.start || run.sourceStart >= cut.end) {
+      continue;
+    }
+    let from = run.valueStart;
+    let to = run.valueEnd;
+    if (run.atomic) {
+      if (run.sourceStart < cut.start || run.sourceEnd > cut.end) {
+        return undefined;
+      }
+    } else {
+      from += Math.max(cut.start, run.sourceStart) - run.sourceStart;
+      to -= run.sourceEnd - Math.min(cut.end, run.sourceEnd);
+    }
+    start ??= from;
+    end = to;
+  }
+  return start === undefined ? undefined : { start, end };
+}
+
 class Masker {
   private readonly builder = new MaskedTextBuilder();
   /** Index of the first template tag not yet output. */
@@ -225,6 +256,7 @@ class Masker {
     private readonly source: string,
     private readonly tags: readonly TemplateTag[],
     private readonly productNames: ProductNameMatcher | undefined,
+    private readonly idCut: HeadingIdCut | undefined,
   ) {}
 
   result(): MaskedText {
@@ -464,6 +496,7 @@ class Masker {
     runs: readonly TextRun[],
     length: number,
     span: Span,
+    idRemoved: Span | undefined,
   ): Span[] {
     const removed: Span[] = [];
     let k = this.firstTagEndingAfter(span.start);
@@ -493,6 +526,10 @@ class Masker {
         m += 1;
       }
     }
+    if (idRemoved !== undefined) {
+      removed.push(idRemoved);
+      removed.sort((a, b) => a.start - b.start);
+    }
     const kept: Span[] = [];
     let cursor = 0;
     for (const range of removed) {
@@ -514,7 +551,9 @@ class Masker {
     }
     const value = node.value;
     const runs = alignText(value, this.source, span.start, span.end);
-    for (const range of this.keptRanges(runs, value.length, span)) {
+    const idRemoved =
+      this.idCut?.node === node ? idValueRange(runs, this.idCut) : undefined;
+    for (const range of this.keptRanges(runs, value.length, span, idRemoved)) {
       this.keptText(value, runs, range);
     }
   }
@@ -584,7 +623,11 @@ export function maskBlock(
       codes,
     );
   }
-  const masker = new Masker(parsed.source, tags, options.productNames);
+  const idCut =
+    parsed.syntax === "markdown" && block.type === "heading"
+      ? findHeadingId(block, parsed.source)
+      : undefined;
+  const masker = new Masker(parsed.source, tags, options.productNames, idCut);
   masker.walkList(block.children, true);
   return masker.result();
 }
