@@ -1,3 +1,9 @@
+import { createAdmonitionLabelFormatExtractor } from "../admonitions/admonition-label-format-extractor.js";
+import { createAdmonitionSyntaxExtractor } from "../admonitions/admonition-syntax-extractor.js";
+import { createCodeFenceExtractor } from "../code-blocks/code-fence-extractor.js";
+import { createCodeLangNameExtractor } from "../code-blocks/code-lang-name-extractor.js";
+import { createCodeLangTagExtractor } from "../code-blocks/code-lang-tag-extractor.js";
+import { createCodeShellPromptExtractor } from "../code-blocks/code-shell-prompt-extractor.js";
 import type { VariantGroup } from "../config/variants-types.js";
 import { createHeadingCaseExtractor } from "../headings/heading-case-extractor.js";
 import { createHeadingEndPunctExtractor } from "../headings/heading-end-punct-extractor.js";
@@ -35,5 +41,11 @@ export function createBuiltInExtractors(
     createStepStartExtractor(),
     createStepEndPunctExtractor(),
     createProcedureIntroExtractor(),
+    createAdmonitionSyntaxExtractor(),
+    createAdmonitionLabelFormatExtractor(),
+    createCodeFenceExtractor(),
+    createCodeLangTagExtractor(),
+    createCodeLangNameExtractor(),
+    createCodeShellPromptExtractor(),
   ];
 }

@@ -21,6 +21,7 @@ import {
   type MarkdownSyntax,
   type ParsedMarkdown,
 } from "../markdown/parse-markdown.js";
+import { RangeIndex } from "../markdown/range-index.js";
 import type { ProductNameMatcher } from "../markdown/product-names.js";
 import {
   collectProseBlocks,
@@ -83,6 +84,8 @@ export interface PreparedDoc {
   readonly blocks: readonly PreparedBlock[];
   /** Ignore ranges that name check IDs; the checker applies them. */
   readonly checkIgnores: readonly IgnoredRange[];
+  /** Ignore ranges for every check, in source order; tree-based checks skip what overlaps them. */
+  readonly ignoredRanges: readonly IgnoredRange[];
   /** Frontmatter warnings first, then ignore warnings, each in source order. */
   readonly warnings: readonly PrepareWarning[];
   /** Ignore warnings dropped after the first 100. */
@@ -108,51 +111,6 @@ export interface SkippedDoc {
 }
 
 export type PrepareResult = PreparedDoc | SkippedDoc;
-
-/**
- * Answers "does a sentence overlap, or sit inside, one of these ranges" in
- * logarithmic time: ranges sorted by start, with the largest end so far.
- */
-class RangeIndex {
-  readonly #starts: number[] = [];
-  readonly #maxEnds: number[] = [];
-
-  constructor(ranges: readonly SourceRange[]) {
-    const sorted = [...ranges].sort((a, b) => a.start - b.start);
-    let maxEnd = -1;
-    for (const range of sorted) {
-      maxEnd = Math.max(maxEnd, range.end);
-      this.#starts.push(range.start);
-      this.#maxEnds.push(maxEnd);
-    }
-  }
-
-  /** How many ranges start before `limit` (or at it, when `inclusive`). */
-  #countStartingBefore(limit: number, inclusive: boolean): number {
-    let low = 0;
-    let high = this.#starts.length;
-    while (low < high) {
-      const middle = (low + high) >> 1;
-      const start = this.#starts[middle] ?? 0;
-      if (inclusive ? start <= limit : start < limit) {
-        low = middle + 1;
-      } else {
-        high = middle;
-      }
-    }
-    return low;
-  }
-
-  overlaps(range: SourceRange): boolean {
-    const count = this.#countStartingBefore(range.end, false);
-    return count > 0 && (this.#maxEnds[count - 1] ?? -1) > range.start;
-  }
-
-  contains(range: SourceRange): boolean {
-    const count = this.#countStartingBefore(range.start, true);
-    return count > 0 && (this.#maxEnds[count - 1] ?? -1) >= range.end;
-  }
-}
 
 function skipped(
   syntax: MarkdownSyntax,
@@ -277,8 +235,11 @@ function prepareParsed(
   const codeRanges =
     parsed.syntax === "markdown" ? findHugoCodeRanges(parsed.source) : [];
   const code = new RangeIndex(codeRanges);
+  const ignoredRanges = scan.ignored
+    .filter((r) => r.checks.length === 0)
+    .sort((a, b) => a.start - b.start);
   const index = {
-    ignored: new RangeIndex(scan.ignored.filter((r) => r.checks.length === 0)),
+    ignored: new RangeIndex(ignoredRanges),
     html: new RangeIndex([...scan.htmlRanges, ...codeRanges]),
   };
   const lines = new SourceLines(parsed.source);
@@ -307,6 +268,7 @@ function prepareParsed(
     title: findTitle(units, parsed, data, options, code),
     blocks,
     checkIgnores: scan.ignored.filter((r) => r.checks.length > 0),
+    ignoredRanges,
     warnings: buildWarnings(data, scan.warnings),
     moreWarnings: scan.moreWarnings,
   };

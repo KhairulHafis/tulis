@@ -438,3 +438,50 @@ describe("Hugo highlight code", () => {
     expect(sentenceTexts(doc)).toEqual([["Title"], ["Text."]]);
   });
 });
+
+describe("ignoredRanges", () => {
+  it("is empty for a doc without ignore comments", () => {
+    expect(prepared("# Title\n\nText.\n").ignoredRanges).toEqual([]);
+  });
+
+  it("holds the next range for a tulis-ignore comment", () => {
+    const text = "<!-- tulis-ignore -->\n```bash\nls\n```\n\nText.\n";
+    const doc = prepared(text);
+    expect(doc.ignoredRanges).toHaveLength(1);
+    const range = doc.ignoredRanges[0];
+    expect(range?.kind).toBe("next");
+    expect(range?.checks).toEqual([]);
+    const code = text.indexOf("```bash");
+    const text2 = text.indexOf("Text.");
+    expect(range?.start).toBeLessThanOrEqual(code);
+    expect(range?.end).toBeGreaterThanOrEqual(code + "```bash\nls\n```".length);
+    expect(range?.end).toBeLessThanOrEqual(text2);
+  });
+
+  it("holds the start and end range of a pair", () => {
+    const text =
+      "<!-- tulis-ignore-start -->\n\nA.\n\n<!-- tulis-ignore-end -->\n\nB.\n";
+    const doc = prepared(text);
+    expect(doc.ignoredRanges).toHaveLength(1);
+    expect(doc.ignoredRanges[0]?.kind).toBe("range");
+    expect(doc.ignoredRanges[0]?.start).toBe(text.indexOf("\n"));
+    expect(doc.ignoredRanges[0]?.end).toBeGreaterThan(text.indexOf("A."));
+    expect(doc.ignoredRanges[0]?.end).toBeLessThanOrEqual(text.indexOf("B."));
+  });
+
+  it("keeps ranges that name check IDs in checkIgnores only", () => {
+    const doc = prepared("<!-- tulis-ignore term.sign-in -->\nSign in.\n");
+    expect(doc.ignoredRanges).toEqual([]);
+    expect(doc.checkIgnores).toHaveLength(1);
+  });
+
+  it("is sorted by start and survives structuredClone", () => {
+    const doc = prepared(
+      "<!-- tulis-ignore -->\nA.\n\nKeep.\n\n<!-- tulis-ignore -->\nB.\n",
+    );
+    expect(doc.ignoredRanges).toHaveLength(2);
+    const [first, second] = doc.ignoredRanges;
+    expect(first?.start).toBeLessThan(second?.start ?? 0);
+    expect(structuredClone(doc.ignoredRanges)).toEqual(doc.ignoredRanges);
+  });
+});

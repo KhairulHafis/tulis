@@ -363,3 +363,26 @@ export { createStepEndPunctExtractor } from "./procedures/step-end-punct-extract
 export { createProcedureIntroExtractor } from "./procedures/procedure-intro-extractor.js";
 export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
 export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";
+export { findAdmonitions } from "./admonitions/find-admonitions.js";
+export type {
+  Admonition,
+  AdmonitionSyntax,
+  AdmonitionLabel,
+} from "./admonitions/find-admonitions.js";
+export type { AdmonitionLabelFormat } from "./admonitions/label-format.js";
+export { labelFormat } from "./admonitions/label-format.js";
+export { createAdmonitionSyntaxExtractor } from "./admonitions/admonition-syntax-extractor.js";
+export { createAdmonitionLabelFormatExtractor } from "./admonitions/admonition-label-format-extractor.js";
+export { findCodeBlocks, codeFence } from "./code-blocks/find-code-blocks.js";
+export type { CodeBlock, CodeFence } from "./code-blocks/find-code-blocks.js";
+export {
+  LANGUAGE_GROUPS,
+  languageGroup,
+} from "./code-blocks/language-groups.js";
+export type { LanguageGroup } from "./code-blocks/language-groups.js";
+export { shellPrompt } from "./code-blocks/shell-prompt.js";
+export type { ShellPrompt } from "./code-blocks/shell-prompt.js";
+export { createCodeFenceExtractor } from "./code-blocks/code-fence-extractor.js";
+export { createCodeLangTagExtractor } from "./code-blocks/code-lang-tag-extractor.js";
+export { createCodeLangNameExtractor } from "./code-blocks/code-lang-name-extractor.js";
+export { createCodeShellPromptExtractor } from "./code-blocks/code-shell-prompt-extractor.js";
