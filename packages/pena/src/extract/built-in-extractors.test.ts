@@ -15,7 +15,7 @@ const groups: readonly VariantGroup[] = [
 ];
 
 describe("createBuiltInExtractors", () => {
-  it("lists synonyms, verb-noun, purpose clauses, heading case, then heading end punctuation", () => {
+  it("lists synonyms, verb-noun, purpose clauses, headings, then procedures", () => {
     const extractors = createBuiltInExtractors({ groups });
     expect(extractors.map((extractor) => extractor.id)).toEqual([
       "term.synonyms",
@@ -23,15 +23,22 @@ describe("createBuiltInExtractors", () => {
       "phrasing.purpose-clause",
       "heading.case",
       "heading.end-punct",
+      "procedure.numbering",
+      "procedure.step-start",
+      "procedure.step-end-punct",
+      "procedure.intro",
     ]);
   });
 
-  it("includes the heading extractors last, with no groups", () => {
+  it("includes the procedure extractors last, with no groups", () => {
     const extractors = createBuiltInExtractors({ groups: [] });
-    expect(extractors.slice(-3).map((e) => e.id)).toEqual([
-      "phrasing.purpose-clause",
+    expect(extractors.slice(-6).map((e) => e.id)).toEqual([
       "heading.case",
       "heading.end-punct",
+      "procedure.numbering",
+      "procedure.step-start",
+      "procedure.step-end-punct",
+      "procedure.intro",
     ]);
   });
 

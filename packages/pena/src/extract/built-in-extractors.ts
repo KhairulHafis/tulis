@@ -2,6 +2,10 @@ import type { VariantGroup } from "../config/variants-types.js";
 import { createHeadingCaseExtractor } from "../headings/heading-case-extractor.js";
 import { createHeadingEndPunctExtractor } from "../headings/heading-end-punct-extractor.js";
 import { createPurposeClauseExtractor } from "../phrasing/purpose-clause-extractor.js";
+import { createProcedureIntroExtractor } from "../procedures/procedure-intro-extractor.js";
+import { createProcedureNumberingExtractor } from "../procedures/procedure-numbering-extractor.js";
+import { createStepEndPunctExtractor } from "../procedures/step-end-punct-extractor.js";
+import { createStepStartExtractor } from "../procedures/step-start-extractor.js";
 import { createSynonymExtractor } from "../terms/synonym-extractor.js";
 import { createVerbNounExtractor } from "../terms/verb-noun-extractor.js";
 import type { Extractor } from "./extractor.js";
@@ -27,5 +31,9 @@ export function createBuiltInExtractors(
         : { properNouns: options.properNouns },
     ),
     createHeadingEndPunctExtractor(),
+    createProcedureNumberingExtractor(),
+    createStepStartExtractor(),
+    createStepEndPunctExtractor(),
+    createProcedureIntroExtractor(),
   ];
 }
