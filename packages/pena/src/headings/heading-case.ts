@@ -83,12 +83,30 @@ function countableCase(text: string): "upper" | "lower" | undefined {
   return first;
 }
 
-/** undefined when the heading has too few countable words to tell. */
-export function headingCase(tokens: readonly Token[]): HeadingCase | undefined {
+/**
+ * The key a word has in a set of proper nouns: NFC-normalised, lowercase,
+ * with one trailing 's or right-quote 's removed.
+ */
+export function properNounKey(word: string): string {
+  const lower = word.normalize("NFC").toLowerCase();
+  if (lower.endsWith("'s") || lower.endsWith("\u2019s")) {
+    return lower.slice(0, -2);
+  }
+  return lower;
+}
+
+export interface CountableWord {
+  readonly text: string;
+  readonly letterCase: "upper" | "lower";
+  /** The first word, or the first after a phrase separator. */
+  readonly atStart: boolean;
+}
+
+/** The countable words of a token list, in order, with their start flag. */
+export function* countableWords(
+  tokens: readonly Token[],
+): Generator<CountableWord> {
   let atStart = true;
-  let countable = 0;
-  let upperDeciding = false;
-  let lowerDeciding = false;
   for (const token of tokens) {
     if (token.kind === "punctuation") {
       if (START_PUNCTUATION.has(token.text)) atStart = true;
@@ -99,10 +117,29 @@ export function headingCase(tokens: readonly Token[]): HeadingCase | undefined {
     atStart = false;
     const letterCase = countableCase(token.text);
     if (letterCase === undefined) continue;
+    yield { text: token.text, letterCase, atStart: wasStart };
+  }
+}
+
+/**
+ * undefined when the heading has too few countable words to tell. A
+ * capitalised word in `properNouns` (keys from `properNounKey`) is counted
+ * but never decides.
+ */
+export function headingCase(
+  tokens: readonly Token[],
+  properNouns?: ReadonlySet<string>,
+): HeadingCase | undefined {
+  let countable = 0;
+  let upperDeciding = false;
+  let lowerDeciding = false;
+  for (const word of countableWords(tokens)) {
     countable += 1;
-    if (wasStart) continue;
-    if (letterCase === "lower") lowerDeciding = true;
-    else upperDeciding = true;
+    if (word.atStart) continue;
+    if (word.letterCase === "lower") lowerDeciding = true;
+    else if (properNouns?.has(properNounKey(word.text)) !== true) {
+      upperDeciding = true;
+    }
   }
   if (countable < 2) return undefined;
   if (lowerDeciding) return "sentence";

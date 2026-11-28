@@ -6,6 +6,11 @@ import {
   createExtractorRegistry,
   engineName,
   headingCase,
+  countWordCase,
+  sumWordCase,
+  learnProperNouns,
+  properNounKey,
+  MAX_PROPER_NOUNS,
   headingEndPunct,
   parseSeedGroups,
   prepareDoc,
@@ -92,5 +97,16 @@ describe("pena", () => {
     const tokens = doc.blocks[0]?.sentences[0]?.tokens ?? [];
     expect(headingCase(tokens)).toBe("sentence");
     expect(headingEndPunct(tokens)).toBe("colon");
+  });
+
+  it("exports the proper-noun learning functions", () => {
+    const doc = prepareDoc("Use Datadog and Datadog here.\n", "markdown");
+    if (doc.kind !== "prepared") throw new Error("expected a prepared doc");
+    const counts = countWordCase(doc);
+    expect(counts.get("datadog")).toEqual({ upper: 2, lower: 0 });
+    const totals = sumWordCase([counts]);
+    expect(learnProperNouns(totals).size).toBe(0);
+    expect(properNounKey("Datadog\u2019s")).toBe("datadog");
+    expect(MAX_PROPER_NOUNS).toBe(10_000);
   });
 });
