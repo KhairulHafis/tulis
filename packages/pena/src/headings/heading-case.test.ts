@@ -124,3 +124,40 @@ describe("headingCase skip rules", () => {
     expect(caseOfHeading("API server settings")).toBe("sentence");
   });
 });
+
+const NAMES: ReadonlySet<string> = new Set([
+  "datadog",
+  "kubernetes",
+  "praefect",
+  "windows",
+]);
+
+const PROPER_NOUN_TABLE: readonly (readonly [
+  string,
+  HeadingCase | undefined,
+  HeadingCase | undefined,
+])[] = [
+  ["Disable Datadog", "title", undefined],
+  ["Extending Kubernetes", "title", undefined],
+  ["Configure Datadog Monitoring", "title", "title"],
+  ["Praefect migrations", "sentence", "sentence"],
+  ["Use datadog", "sentence", "sentence"],
+  ["Windows Support For Datadog", "title", "title"],
+  ["Disable Datadog’s Agent", "title", "title"],
+  ["Disable Datadog’s", "title", undefined],
+  ["Install Datadog: Quick Start", "title", "title"],
+];
+
+describe("headingCase with proper nouns", () => {
+  for (const [heading, without, withSet] of PROPER_NOUN_TABLE) {
+    it(heading + " without the set", () => {
+      expect(headingCase(tokensOf(heading))).toBe(without);
+    });
+    it(heading + " with the set", () => {
+      expect(headingCase(tokensOf(heading), NAMES)).toBe(withSet);
+    });
+    it(heading + " with an empty set", () => {
+      expect(headingCase(tokensOf(heading), new Set())).toBe(without);
+    });
+  }
+});

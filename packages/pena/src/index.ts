@@ -331,6 +331,21 @@ export type { HeadingCase } from "./headings/heading-case.js";
 export { headingEndPunct } from "./headings/heading-end-punct.js";
 export type { HeadingEndPunct } from "./headings/heading-end-punct.js";
 export { createHeadingCaseExtractor } from "./headings/heading-case-extractor.js";
+export type { HeadingCaseOptions } from "./headings/heading-case-extractor.js";
+export {
+  MAX_DOC_WORD_KEYS,
+  MAX_TOTAL_WORD_KEYS,
+  MAX_PROPER_NOUNS,
+  MAX_PROPER_NOUN_KEY_LENGTH,
+  PROPER_NOUN_MIN_USES,
+  PROPER_NOUN_MIN_SHARE,
+  PROPER_NOUN_MIN_DOCS,
+  properNounKey,
+  countWordCase,
+  sumWordCase,
+  learnProperNouns,
+} from "./headings/proper-nouns.js";
+export type { WordCaseCount, WordCaseTotal } from "./headings/proper-nouns.js";
 export { createHeadingEndPunctExtractor } from "./headings/heading-end-punct-extractor.js";
 export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
 export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";

@@ -9,6 +9,8 @@ import type { Extractor } from "./extractor.js";
 export interface BuiltInExtractorOptions {
   /** Resolved variant groups (seeds merged with the team's file). */
   readonly groups: readonly VariantGroup[];
+  /** Learned proper-noun keys, so capitalised names don't signal title case. */
+  readonly properNouns?: ReadonlySet<string>;
 }
 
 /** Every built-in extractor, in a fixed order. Later sessions add theirs here. */
@@ -19,7 +21,11 @@ export function createBuiltInExtractors(
     createSynonymExtractor(options.groups),
     createVerbNounExtractor(options.groups),
     createPurposeClauseExtractor(),
-    createHeadingCaseExtractor(),
+    createHeadingCaseExtractor(
+      options.properNouns === undefined
+        ? {}
+        : { properNouns: options.properNouns },
+    ),
     createHeadingEndPunctExtractor(),
   ];
 }
