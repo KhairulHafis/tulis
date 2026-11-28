@@ -62,4 +62,62 @@ describe("structure extractors end to end", () => {
       "admonition.syntax=hugo-shortcode",
     ]);
   });
+
+  it("records ui.format and shape observations in runner order", () => {
+    const text = [
+      "---",
+      "title: Install the agent",
+      "---",
+      "",
+      "{{< details >}}",
+      "",
+      "- Tier: Free",
+      "",
+      "{{< /details >}}",
+      "",
+      "This page explains how to install the agent.",
+      "",
+      "## Prerequisites",
+      "",
+      'Select **Settings** and then click "Save".',
+      "",
+      "#### Too deep",
+      "",
+      "## Install the agent",
+      "",
+      '1. Select {{< ui text="Install" >}}.',
+      "",
+    ].join("\n");
+    const doc = prepareDoc(text, "markdown");
+    if (doc.kind !== "prepared") throw new Error("not prepared");
+    const result = runExtractors(
+      createExtractorRegistry(createBuiltInExtractors({ groups: [] })),
+      doc,
+    );
+    expect(result.problems).toEqual([]);
+    const source = doc.parsed.source;
+    expect(
+      result.observations
+        .filter(
+          (o) =>
+            o.dimension.startsWith("ui.") || o.dimension.startsWith("shape."),
+        )
+        .map(
+          (o) =>
+            o.dimension +
+            "=" +
+            o.value +
+            " " +
+            JSON.stringify(source.slice(o.range.start, o.range.end)),
+        ),
+    ).toEqual([
+      'shape.intro=yes "This page explains how to install the agent."',
+      'shape.sections=prerequisites "## Prerequisites"',
+      'ui.format=bold "Select **Settings**"',
+      'ui.format=quotes "click \\"Save\\""',
+      'shape.heading-skip=jump "#### Too deep"',
+      'shape.sections=install the agent "## Install the agent"',
+      'ui.format=hugo-shortcode "Select {{< ui text=\\"Install\\" >}}"',
+    ]);
+  });
 });

@@ -133,6 +133,24 @@ describe("pena", () => {
     expect(Array.isArray(pena.LANGUAGE_GROUPS)).toBe(true);
   });
 
+  it("exports the UI label and doc shape functions", () => {
+    const functions = [
+      "findUiLabels",
+      "createUiFormatExtractor",
+      "findIntro",
+      "findHeadingSkip",
+      "sectionName",
+      "createShapeIntroExtractor",
+      "createShapeHeadingSkipExtractor",
+      "createShapeSectionsExtractor",
+    ];
+    const exported: Record<string, unknown> = { ...pena };
+    for (const name of functions) {
+      expect(typeof exported[name], name).toBe("function");
+    }
+    expect(pena.UI_LABEL_VERBS.has("select")).toBe(true);
+  });
+
   it("keeps the tree helpers internal", () => {
     const exported: Record<string, unknown> = { ...pena };
     for (const name of ["walkTree", "isIgnored", "nodeRange", "RangeIndex"]) {

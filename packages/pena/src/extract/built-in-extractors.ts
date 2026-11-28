@@ -12,8 +12,14 @@ import { createProcedureIntroExtractor } from "../procedures/procedure-intro-ext
 import { createProcedureNumberingExtractor } from "../procedures/procedure-numbering-extractor.js";
 import { createStepEndPunctExtractor } from "../procedures/step-end-punct-extractor.js";
 import { createStepStartExtractor } from "../procedures/step-start-extractor.js";
+import {
+  createShapeHeadingSkipExtractor,
+  createShapeIntroExtractor,
+  createShapeSectionsExtractor,
+} from "../doc-shape/shape-extractors.js";
 import { createSynonymExtractor } from "../terms/synonym-extractor.js";
 import { createVerbNounExtractor } from "../terms/verb-noun-extractor.js";
+import { createUiFormatExtractor } from "../ui-labels/ui-format-extractor.js";
 import type { Extractor } from "./extractor.js";
 
 export interface BuiltInExtractorOptions {
@@ -47,5 +53,9 @@ export function createBuiltInExtractors(
     createCodeLangTagExtractor(),
     createCodeLangNameExtractor(),
     createCodeShellPromptExtractor(),
+    createUiFormatExtractor(),
+    createShapeIntroExtractor(),
+    createShapeHeadingSkipExtractor(),
+    createShapeSectionsExtractor(),
   ];
 }
