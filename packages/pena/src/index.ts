@@ -386,3 +386,16 @@ export { createCodeFenceExtractor } from "./code-blocks/code-fence-extractor.js"
 export { createCodeLangTagExtractor } from "./code-blocks/code-lang-tag-extractor.js";
 export { createCodeLangNameExtractor } from "./code-blocks/code-lang-name-extractor.js";
 export { createCodeShellPromptExtractor } from "./code-blocks/code-shell-prompt-extractor.js";
+export { findUiLabels, UI_LABEL_VERBS } from "./ui-labels/ui-label-format.js";
+export type { UiLabel, UiLabelFormat } from "./ui-labels/ui-label-format.js";
+export { createUiFormatExtractor } from "./ui-labels/ui-format-extractor.js";
+export { findIntro } from "./doc-shape/intro.js";
+export type { IntroValue } from "./doc-shape/intro.js";
+export { findHeadingSkip } from "./doc-shape/heading-skip.js";
+export type { HeadingSkipValue } from "./doc-shape/heading-skip.js";
+export { sectionName } from "./doc-shape/section-name.js";
+export {
+  createShapeIntroExtractor,
+  createShapeHeadingSkipExtractor,
+  createShapeSectionsExtractor,
+} from "./doc-shape/shape-extractors.js";

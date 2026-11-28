@@ -15,7 +15,7 @@ const groups: readonly VariantGroup[] = [
 ];
 
 describe("createBuiltInExtractors", () => {
-  it("lists synonyms, verb-noun, purpose clauses, headings, procedures, admonitions, then code blocks", () => {
+  it("lists synonyms, verb-noun, purpose clauses, headings, procedures, admonitions, code blocks, UI labels, then doc shape", () => {
     const extractors = createBuiltInExtractors({ groups });
     expect(extractors.map((extractor) => extractor.id)).toEqual([
       "term.synonyms",
@@ -33,12 +33,16 @@ describe("createBuiltInExtractors", () => {
       "code.lang-tag",
       "code.lang-name",
       "code.shell-prompt",
+      "ui.format",
+      "shape.intro",
+      "shape.heading-skip",
+      "shape.sections",
     ]);
   });
 
-  it("includes the six structure extractors last, with no groups", () => {
+  it("includes the six structure extractors before the UI and shape ones, with no groups", () => {
     const extractors = createBuiltInExtractors({ groups: [] });
-    expect(extractors.slice(-6).map((e) => e.id)).toEqual([
+    expect(extractors.slice(-10, -4).map((e) => e.id)).toEqual([
       "admonition.syntax",
       "admonition.label-format",
       "code.fence",
