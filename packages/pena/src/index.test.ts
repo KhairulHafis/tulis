@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   createBuiltInExtractors,
+  createHeadingCaseExtractor,
+  createHeadingEndPunctExtractor,
   createExtractorRegistry,
   engineName,
+  headingCase,
+  headingEndPunct,
   parseSeedGroups,
   prepareDoc,
   runExtractors,
@@ -67,5 +71,26 @@ describe("pena", () => {
     expect(result.observations.map((o) => [o.dimension, o.value])).toEqual([
       ["term.sign-in", "log in"],
     ]);
+  });
+
+  it("exports the heading extractors and rules", () => {
+    const doc = prepareDoc("## Install the agent:\n", "markdown");
+    if (doc.kind !== "prepared") {
+      throw new Error("expected a prepared doc");
+    }
+    const result = runExtractors(
+      createExtractorRegistry([
+        createHeadingCaseExtractor(),
+        createHeadingEndPunctExtractor(),
+      ]),
+      doc,
+    );
+    expect(result.observations.map((o) => [o.dimension, o.value])).toEqual([
+      ["heading.case.h2plus", "sentence"],
+      ["heading.end-punct", "colon"],
+    ]);
+    const tokens = doc.blocks[0]?.sentences[0]?.tokens ?? [];
+    expect(headingCase(tokens)).toBe("sentence");
+    expect(headingEndPunct(tokens)).toBe("colon");
   });
 });

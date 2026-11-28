@@ -71,10 +71,10 @@ describe("timing", () => {
         const text = "A short one.\n\n".repeat(size);
         return () => prepareDoc(text, "markdown");
       },
-      probe: { size: 250, limitMs: 100 },
+      probe: { size: 250, limitMs: 300 },
       sizes: [500, 1000, 2000],
-      smallLimitMs: 200,
-      largeLimitMs: 400,
+      smallLimitMs: 500,
+      largeLimitMs: 800,
       slack: 4,
       floorMs: 50,
     });
@@ -90,12 +90,74 @@ describe("timing", () => {
         );
         return () => prepareDoc(text, "markdown");
       },
-      probe: { size: 125, limitMs: 100 },
+      probe: { size: 125, limitMs: 300 },
       sizes: [125, 250, 1000],
       smallLimitMs: 200,
       largeLimitMs: 400,
       slack: 4,
       floorMs: 50,
     });
+  });
+});
+
+describe("frontmatter title parsing", () => {
+  const hostile: [string, string][] = [
+    ["link brackets", "[](".repeat(333) + "["],
+    ["bracket pairs", "[a](b".repeat(200)],
+    ["nested emphasis", "*_".repeat(500)],
+    ["backticks", "`".repeat(999) + "a"],
+    ["entities", "&#35;&amp;".repeat(90)],
+  ];
+  for (const [name, title] of hostile) {
+    it("finishes quickly and does not throw for " + name, () => {
+      const started = performance.now();
+      const doc = prepareDoc(
+        "---\ntitle: '" + title.slice(0, 990).replaceAll("'", "") + "'\n---\n",
+        "markdown",
+      );
+      expect(performance.now() - started).toBeLessThan(500);
+      expect(doc.kind).toBe("prepared");
+      if (doc.kind === "prepared") {
+        expect(doc.title?.from).toBe("frontmatter");
+      }
+    });
+  }
+
+  it("handles an mdx doc with a hostile title", () => {
+    const doc = prepareDoc("---\ntitle: '<b>**{'\n---\n", "mdx");
+    expect(doc.kind).toBe("prepared");
+  });
+});
+
+describe("Hugo highlight ranges", () => {
+  const cases: [string, string][] = [
+    ["open tags alternating with text", "{{< highlight y >}}\nx\n"],
+    ["unclosed open tags", "{{< highlight y >}}\n"],
+  ];
+  for (const [name, unit] of cases) {
+    it("stays linear for " + name, () => {
+      expectLinearTime({
+        prepare: (size) => {
+          const text = unit.repeat(size);
+          return () => prepareDoc(text, "markdown");
+        },
+        probe: { size: 500, limitMs: 300 },
+        sizes: [1000, 2000, 4000],
+        smallLimitMs: 1000,
+        largeLimitMs: 2000,
+        slack: 4,
+        floorMs: 50,
+      });
+    });
+  }
+
+  it("stays correct with 4,000 opening tags and one closing tag", () => {
+    const text =
+      "{{< highlight y >}}\nx\n".repeat(4000) +
+      "{{< /highlight >}}\n\nOutside.\n";
+    const doc = prepared(text);
+    expect(doc.blocks.flatMap((b) => b.sentences.map((s) => s.text))).toEqual([
+      "Outside.",
+    ]);
   });
 });

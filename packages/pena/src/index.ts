@@ -326,5 +326,11 @@ export type {
   PurposePosition,
 } from "./phrasing/purpose-clause.js";
 export { createPurposeClauseExtractor } from "./phrasing/purpose-clause-extractor.js";
+export { headingCase } from "./headings/heading-case.js";
+export type { HeadingCase } from "./headings/heading-case.js";
+export { headingEndPunct } from "./headings/heading-end-punct.js";
+export type { HeadingEndPunct } from "./headings/heading-end-punct.js";
+export { createHeadingCaseExtractor } from "./headings/heading-case-extractor.js";
+export { createHeadingEndPunctExtractor } from "./headings/heading-end-punct-extractor.js";
 export { createBuiltInExtractors } from "./extract/built-in-extractors.js";
 export type { BuiltInExtractorOptions } from "./extract/built-in-extractors.js";

@@ -6,6 +6,7 @@ import {
   type FrontmatterData,
   type FrontmatterWarning,
 } from "../markdown/frontmatter-data.js";
+import { findHugoCodeRanges } from "../markdown/hugo-code-ranges.js";
 import {
   findIgnoredRanges,
   type IgnoredRange,
@@ -27,6 +28,7 @@ import {
   type ProseUnit,
   type ProseUnitKind,
 } from "../markdown/prose-units.js";
+import { frontmatterTitleParts } from "./frontmatter-title.js";
 import type { Sentence } from "../markdown/sentences.js";
 import { SourceLines, type LineColumn } from "../markdown/source-lines.js";
 
@@ -60,6 +62,11 @@ export type PreparedTitle =
       readonly from: "frontmatter";
       readonly text: string;
       readonly line: number;
+      /** The title read as a one-line H1; source offsets index `text`. */
+      readonly masked: MaskedText;
+      readonly tokens: readonly Token[];
+      /** Where the title sits in `parsed.source`. */
+      readonly range: SourceRange;
     };
 
 export type PrepareWarning =
@@ -200,11 +207,19 @@ function findTitle(
   units: readonly ProseUnit[],
   parsed: ParsedMarkdown,
   data: FrontmatterData | undefined,
+  options: PrepareOptions,
+  code: RangeIndex,
 ): PreparedTitle | undefined {
   for (const unit of units) {
     if (unit.block.type === "heading" && unit.block.depth === 1) {
       const line = unit.block.position?.start.line;
-      if (line !== undefined) {
+      const from = unit.block.position?.start.offset;
+      const to = unit.block.position?.end.offset;
+      const inCode =
+        from !== undefined &&
+        to !== undefined &&
+        code.contains({ start: from, end: to });
+      if (line !== undefined && !inCode) {
         return { from: "h1", text: unit.masked.text.trim(), line };
       }
     }
@@ -216,6 +231,7 @@ function findTitle(
         from: "frontmatter",
         text,
         line: parsed.frontmatter.position.start.line,
+        ...frontmatterTitleParts(parsed, text, options),
       };
     }
   }
@@ -258,9 +274,12 @@ function prepareParsed(
   }
 
   const scan = findIgnoredRanges(parsed);
+  const codeRanges =
+    parsed.syntax === "markdown" ? findHugoCodeRanges(parsed.source) : [];
+  const code = new RangeIndex(codeRanges);
   const index = {
     ignored: new RangeIndex(scan.ignored.filter((r) => r.checks.length === 0)),
-    html: new RangeIndex(scan.htmlRanges),
+    html: new RangeIndex([...scan.htmlRanges, ...codeRanges]),
   };
   const lines = new SourceLines(parsed.source);
 
@@ -285,7 +304,7 @@ function prepareParsed(
     syntax: parsed.syntax,
     parsed,
     frontmatter: data,
-    title: findTitle(units, parsed, data),
+    title: findTitle(units, parsed, data, options, code),
     blocks,
     checkIgnores: scan.ignored.filter((r) => r.checks.length > 0),
     warnings: buildWarnings(data, scan.warnings),

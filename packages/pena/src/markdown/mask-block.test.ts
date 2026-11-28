@@ -449,3 +449,71 @@ describe("maskBlock on the masking fixtures", () => {
     expect(texts[4]).toBe("A literal {SHORTCODE} stays text.");
   });
 });
+
+describe("maskBlock heading IDs", () => {
+  const cases: [string, string][] = [
+    ["## Configuring Pod overhead {#set-up}", "Configuring Pod overhead"],
+    ["### Configure the Server {#configure .wide}", "Configure the Server"],
+    ["## Use {#braces} in text", "Use {#braces} in text"],
+    ["## Foo {#}", "Foo {#}"],
+    ["## Foo {# bar}", "Foo {# bar}"],
+    ["## Foo {#a} {#b}", "Foo {#a}"],
+    ["## Foo {#a}   ", "Foo"],
+    ["## Foo{#a}", "Foo"],
+    ["# {#only}", ""],
+    ["## Foo {#a} ##", "Foo {#a}"],
+    ["Foo {#a}\n===", "Foo {#a}"],
+    ["## Foo {#a{b}", "Foo {#a{b}"],
+    ["## Foo `x` {#a}", "Foo {CODE}"],
+  ];
+  for (const [md, expected] of cases) {
+    it("masks " + JSON.stringify(md), () => {
+      expect(run(md).text.trim()).toBe(expected);
+    });
+  }
+
+  it("drops a brace group of exactly 200 characters, not 201", () => {
+    const ok = "{#" + "a".repeat(197) + "}";
+    expect(ok).toHaveLength(200);
+    expect(run("## Foo " + ok).text.trim()).toBe("Foo");
+    const tooLong = "{#" + "a".repeat(198) + "}";
+    expect(run("## Foo " + tooLong).text.trim()).toBe("Foo " + tooLong);
+  });
+
+  it("keeps the ID when the map is too coarse to cut it exactly", () => {
+    // A NUL becomes U+FFFD in the text node, so alignment stops there and the
+    // rest of the node, ID included, is one atomic run.
+    const nul = String.fromCodePoint(0);
+    const text = run("## Foo " + nul + " bar {#a}").text;
+    expect(text).toContain("{#a}");
+  });
+
+  it("keeps the offsets of the remaining text exact", () => {
+    const parsed = parse("## Configuring Pod overhead {#set-up}\n");
+    const masked = maskAt(parsed, 0);
+    const at = masked.text.indexOf("overhead");
+    const range = toSourceRange(masked, at, at + 8);
+    expect(parsed.source.slice(range.start, range.end)).toBe("overhead");
+    expect(masked.text).toBe("Configuring Pod overhead");
+  });
+
+  it("drops the ID after a bold label and product name", () => {
+    const matcher = createProductNameMatcher(["Kubernetes"]);
+    expect(
+      run("## **Note** Kubernetes {#x}", { productNames: matcher }).text,
+    ).toBe("{UI} {PRODUCT}");
+  });
+
+  it("drops nothing in mdx", () => {
+    const parsed = parse("## Foo {/* c */}\n", "mdx");
+    expect(maskAt(parsed, 0).text).toBe("Foo ");
+    expect(run("## Foo\n", undefined, "mdx").text).toBe("Foo");
+  });
+
+  it("leaves paragraphs and table cells alone", () => {
+    expect(run("Foo {#a}").text).toBe("Foo {#a}");
+    const parsed = parse("| a |\n| - |\n| Foo {#a} |\n");
+    const texts = blocksOf(parsed.tree).map((_, i) => maskAt(parsed, i).text);
+    expect(texts).toContain("Foo {#a}");
+  });
+});

@@ -1,4 +1,6 @@
 import type { VariantGroup } from "../config/variants-types.js";
+import { createHeadingCaseExtractor } from "../headings/heading-case-extractor.js";
+import { createHeadingEndPunctExtractor } from "../headings/heading-end-punct-extractor.js";
 import { createPurposeClauseExtractor } from "../phrasing/purpose-clause-extractor.js";
 import { createSynonymExtractor } from "../terms/synonym-extractor.js";
 import { createVerbNounExtractor } from "../terms/verb-noun-extractor.js";
@@ -17,5 +19,7 @@ export function createBuiltInExtractors(
     createSynonymExtractor(options.groups),
     createVerbNounExtractor(options.groups),
     createPurposeClauseExtractor(),
+    createHeadingCaseExtractor(),
+    createHeadingEndPunctExtractor(),
   ];
 }

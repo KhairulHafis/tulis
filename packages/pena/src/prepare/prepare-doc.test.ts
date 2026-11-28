@@ -144,7 +144,7 @@ describe("title", () => {
 
   it("takes the title from frontmatter when there is no H1", () => {
     const doc = prepared("---\ntitle:  From front \n---\n\n## Sub\n");
-    expect(doc.title).toEqual({
+    expect(doc.title).toMatchObject({
       from: "frontmatter",
       text: "From front",
       line: 1,
@@ -162,7 +162,7 @@ describe("title", () => {
 
   it("works with TOML frontmatter", () => {
     const doc = prepared('+++\ntitle = "Toml title"\n+++\n\nText.\n');
-    expect(doc.title).toEqual({
+    expect(doc.title).toMatchObject({
       from: "frontmatter",
       text: "Toml title",
       line: 1,
@@ -214,5 +214,227 @@ describe("plain data", () => {
       "---\ntitle: T\n---\n\n# Head\n\nSome `code` text. More here.\n\n| a | b |\n| - | - |\n| c | d |\n\n<!-- tulis-ignore term.sign-in -->\nSign in.\n",
     );
     expect(structuredClone(doc)).toEqual(doc);
+  });
+});
+
+describe("heading IDs and titles", () => {
+  it("drops a heading ID from the H1 title and the heading", () => {
+    const doc = prepared("# Install {#install}\n");
+    expect(doc.title).toEqual({ from: "h1", text: "Install", line: 1 });
+    expect(sentenceTexts(doc)).toEqual([["Install"]]);
+  });
+});
+
+describe("frontmatter title", () => {
+  function title(doc: PreparedDoc) {
+    if (doc.title?.from !== "frontmatter") {
+      throw new Error("expected a frontmatter title");
+    }
+    return doc.title;
+  }
+
+  it("has tokens and a range", () => {
+    const text = "---\ntitle: Install the Agent\n---\n\nText.\n";
+    const doc = prepared(text);
+    const found = title(doc);
+    expect(found.line).toBe(1);
+    expect(found.tokens.map((t) => t.text)).toEqual([
+      "Install",
+      "the",
+      "Agent",
+    ]);
+    expect(found.masked.text).toBe("Install the Agent");
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "Install the Agent",
+    );
+    for (const token of found.tokens) {
+      expect(found.text.slice(token.source.start, token.source.end)).toBe(
+        token.text,
+      );
+    }
+  });
+
+  it("masks code and covers the raw text when not found literally", () => {
+    const doc = prepared('---\ntitle: "Use `kubectl` here"\n---\n');
+    const found = title(doc);
+    expect(found.text).toBe("Use `kubectl` here");
+    expect(found.tokens.map((t) => t.text)).toEqual(["Use", "{CODE}", "here"]);
+    expect(found.tokens[1]?.placeholder).toBe("CODE");
+    expect(
+      found.text.slice(
+        found.tokens[1]?.source.start,
+        found.tokens[1]?.source.end,
+      ),
+    ).toBe("`kubectl`");
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "Use `kubectl` here",
+    );
+  });
+
+  it("covers the whole line when the text is not found literally", () => {
+    const doc = prepared("---\ntitle: 'It''s here'\n---\n");
+    const found = title(doc);
+    expect(found.text).toBe("It's here");
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "title: 'It''s here'",
+    );
+  });
+
+  it("masks product names", () => {
+    const doc = prepared(
+      "---\ntitle: Install Acme Cloud now\n---\n",
+      "markdown",
+      {
+        productNames: createProductNameMatcher(["Acme Cloud"]),
+      },
+    );
+    const found = title(doc);
+    expect(found.tokens.map((t) => t.text)).toEqual([
+      "Install",
+      "{PRODUCT}",
+      "now",
+    ]);
+    expect(found.masked.placeholders).toHaveLength(1);
+    expect(
+      found.text.slice(
+        found.tokens[1]?.source.start,
+        found.tokens[1]?.source.end,
+      ),
+    ).toBe("Acme Cloud");
+  });
+
+  it("reads a block scalar title as one token list", () => {
+    const doc = prepared("---\ntitle: |\n  First line\n  second line\n---\n");
+    const found = title(doc);
+    expect(found.text).toBe("First line\nsecond line");
+    expect(found.tokens.map((t) => t.text)).toEqual([
+      "First",
+      "line",
+      "second",
+      "line",
+    ]);
+    for (const token of found.tokens) {
+      expect(found.text.slice(token.source.start, token.source.end)).toBe(
+        token.text,
+      );
+    }
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "title: |",
+    );
+  });
+
+  it("finds the title on its own line after other fields, with CRLF", () => {
+    const doc = prepared("---\r\nweight: 1\r\ntitle: Hello there\r\n---\r\n");
+    const found = title(doc);
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "Hello there",
+    );
+  });
+
+  it("ignores a nested title key above the real one", () => {
+    const doc = prepared(
+      "---\nparams:\n  title: Nested\ntitle: Real one\n---\n",
+    );
+    const found = title(doc);
+    expect(found.text).toBe("Real one");
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "Real one",
+    );
+  });
+
+  it("reads a TOML title and drops a heading ID in it", () => {
+    const doc = prepared('+++\ntitle = "Toml title {#id}"\n+++\n');
+    const found = title(doc);
+    expect(found.tokens.map((t) => t.text)).toEqual(["Toml", "title"]);
+    expect(doc.parsed.source.slice(found.range.start, found.range.end)).toBe(
+      "Toml title {#id}",
+    );
+  });
+
+  it("uses markdown parsing in an mdx doc", () => {
+    const doc = prepared("---\ntitle: Use {braces} here\n---\n", "mdx");
+    expect(title(doc).tokens.map((t) => t.text)).toEqual([
+      "Use",
+      "{",
+      "braces",
+      "}",
+      "here",
+    ]);
+  });
+
+  it("collapses Unicode line separators in the title", () => {
+    const sep = String.fromCodePoint(0x2028);
+    const doc = prepared('---\ntitle: "One' + sep + 'two"\n---\n');
+    const found = title(doc);
+    expect(found.tokens.map((t) => t.text)).toEqual(["One", "two"]);
+    expect(found.text).toHaveLength(7);
+  });
+
+  it("stays plain data", () => {
+    const doc = prepared("---\ntitle: Plain `data`\n---\n");
+    expect(structuredClone(doc.title)).toEqual(doc.title);
+  });
+});
+
+describe("Hugo highlight code", () => {
+  const yaml =
+    'Before.\n\n{{< highlight yaml "linenos=false,hl_lines=2-5" >}}\n---\n# CAUTION: this is an example.\napiVersion: v1\n{{< /highlight >}}\n\nAfter.\n\n## Real heading\n';
+
+  function headings(doc: PreparedDoc): string[] {
+    return doc.blocks
+      .filter((b) => b.kind === "heading")
+      .flatMap((b) => b.sentences.map((s) => s.text));
+  }
+
+  it("drops blocks inside the pair and keeps the rest", () => {
+    const doc = prepared(yaml);
+    expect(headings(doc)).toEqual(["Real heading"]);
+    expect(JSON.stringify(sentenceTexts(doc))).not.toContain("CAUTION");
+    expect(sentenceTexts(doc)).toEqual([
+      ["Before."],
+      ["After."],
+      ["Real heading"],
+    ]);
+  });
+
+  it("handles no spaces and percent delimiters", () => {
+    for (const [open, close] of [
+      ["{{<highlight yaml>}}", "{{</highlight>}}"],
+      ["{{% highlight bash %}}", "{{% /highlight %}}"],
+    ]) {
+      const doc = prepared(
+        `${open ?? ""}\n# CAUTION\nrun it\n${close ?? ""}\n\n## Real heading\n`,
+      );
+      expect(sentenceTexts(doc)).toEqual([["Real heading"]]);
+    }
+  });
+
+  it("drops nothing for an unclosed opening tag", () => {
+    const doc = prepared("{{< highlight yaml >}}\n\n# Kept\n\nText.\n");
+    expect(headings(doc)).toEqual(["Kept"]);
+  });
+
+  it("leaves a mid-line mention alone", () => {
+    const doc = prepared("Use {{< highlight >}} here.\n\n{{< /highlight >}}\n");
+    expect(JSON.stringify(sentenceTexts(doc))).toContain("Use");
+  });
+
+  it("does not take the title from a code block", () => {
+    const doc = prepared(
+      "{{< highlight yaml >}}\n# CAUTION\n{{< /highlight >}}\n",
+    );
+    expect(doc.title).toBeUndefined();
+    const real = prepared(
+      "{{< highlight yaml >}}\n# CAUTION\n{{< /highlight >}}\n\n# Real\n",
+    );
+    expect(real.title).toMatchObject({ from: "h1", text: "Real" });
+  });
+
+  it("is not applied to an mdx doc", () => {
+    // MDX cannot parse a line starting with `{{<`, so a Hugo pair can never
+    // reach the scan there; the syntax guard is checked by the mutation run.
+    const doc = prepared("# Title\n\nText.\n", "mdx");
+    expect(doc.title).toMatchObject({ from: "h1", text: "Title" });
+    expect(sentenceTexts(doc)).toEqual([["Title"], ["Text."]]);
   });
 });
