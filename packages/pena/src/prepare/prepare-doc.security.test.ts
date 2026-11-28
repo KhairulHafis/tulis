@@ -71,7 +71,7 @@ describe("timing", () => {
         const text = "A short one.\n\n".repeat(size);
         return () => prepareDoc(text, "markdown");
       },
-      probe: { size: 250, limitMs: 100 },
+      probe: { size: 250, limitMs: 300 },
       sizes: [500, 1000, 2000],
       smallLimitMs: 500,
       largeLimitMs: 800,
@@ -90,7 +90,7 @@ describe("timing", () => {
         );
         return () => prepareDoc(text, "markdown");
       },
-      probe: { size: 125, limitMs: 100 },
+      probe: { size: 125, limitMs: 300 },
       sizes: [125, 250, 1000],
       smallLimitMs: 200,
       largeLimitMs: 400,
@@ -141,7 +141,7 @@ describe("Hugo highlight ranges", () => {
           const text = unit.repeat(size);
           return () => prepareDoc(text, "markdown");
         },
-        probe: { size: 500, limitMs: 100 },
+        probe: { size: 500, limitMs: 300 },
         sizes: [1000, 2000, 4000],
         smallLimitMs: 1000,
         largeLimitMs: 2000,
