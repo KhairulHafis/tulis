@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as pena from "./index.js";
 import {
   createBuiltInExtractors,
   createHeadingCaseExtractor,
@@ -108,5 +109,34 @@ describe("pena", () => {
     expect(learnProperNouns(totals).size).toBe(0);
     expect(properNounKey("Datadog\u2019s")).toBe("datadog");
     expect(MAX_PROPER_NOUNS).toBe(10_000);
+  });
+
+  it("exports the admonition and code block functions", () => {
+    const functions = [
+      "findAdmonitions",
+      "labelFormat",
+      "createAdmonitionSyntaxExtractor",
+      "createAdmonitionLabelFormatExtractor",
+      "findCodeBlocks",
+      "codeFence",
+      "languageGroup",
+      "shellPrompt",
+      "createCodeFenceExtractor",
+      "createCodeLangTagExtractor",
+      "createCodeLangNameExtractor",
+      "createCodeShellPromptExtractor",
+    ];
+    const exported: Record<string, unknown> = { ...pena };
+    for (const name of functions) {
+      expect(typeof exported[name], name).toBe("function");
+    }
+    expect(Array.isArray(pena.LANGUAGE_GROUPS)).toBe(true);
+  });
+
+  it("keeps the tree helpers internal", () => {
+    const exported: Record<string, unknown> = { ...pena };
+    for (const name of ["walkTree", "isIgnored", "nodeRange", "RangeIndex"]) {
+      expect(name in exported, name).toBe(false);
+    }
   });
 });
