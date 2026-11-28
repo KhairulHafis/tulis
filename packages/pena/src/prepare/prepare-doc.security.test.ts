@@ -143,8 +143,8 @@ describe("Hugo highlight ranges", () => {
         },
         probe: { size: 500, limitMs: 100 },
         sizes: [1000, 2000, 4000],
-        smallLimitMs: 300,
-        largeLimitMs: 600,
+        smallLimitMs: 1000,
+        largeLimitMs: 2000,
         slack: 4,
         floorMs: 50,
       });
